@@ -84,11 +84,17 @@ Internally:
 
 ## 📊 Performance
 
-Tested under simulated load:
+Load tested in local environment using autocannon:
 
-* ~300 requests/sec sustained
-* ~800 concurrent connections
-* Average latency: ~40–70ms
+* ~250–400 requests/sec sustained
+* ~700 concurrent connections
+* Average latency: 45–80ms
+* P95 latency: ~120ms
+
+Test scenario:
+
+* Mixed workload (auth + read-heavy queries)
+* Redis caching enabled for hot paths
 
 *(Measured using autocannon / k6 in local environment)*
 
