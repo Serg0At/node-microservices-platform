@@ -1,0 +1,29 @@
+{
+  "name": "graphql-gateway",
+  "version": "1.0.0",
+  "description": "Apollo Server v4 GraphQL gateway — proxies to gRPC backend microservices",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^4.13.0",
+    "@graphql-tools/schema": "^10.0.31",
+    "@graphql-tools/utils": "^11.0.0",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "express-rate-limit": "^8.2.1",
+    "graphql": "^16.13.0",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "winston": "^3.19.0"
+  }
+}

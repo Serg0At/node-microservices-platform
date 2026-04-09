@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AI tools
+.gemini/
+.claude/
+.mcp.json
+AGENTS.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keys (sensitive)
+keys/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build output
+dist/
+build/

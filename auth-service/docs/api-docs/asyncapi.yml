@@ -1,0 +1,32 @@
+asyncapi: 2.6.0
+
+info:
+  title: Auth Service Events
+  version: 1.0.0
+  description: Async API for auth-related events
+
+servers:
+  production:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+
+channels:
+  user.created:
+    publish:
+      summary: User created event
+      message:
+        name: UserCreated
+        payload:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+          required:
+            - id
+            - email

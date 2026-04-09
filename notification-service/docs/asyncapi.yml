@@ -1,0 +1,621 @@
+asyncapi: 2.6.0
+
+info:
+  title: Notification Service
+  version: 1.0.0
+  description: |
+    Event-driven notification microservice for the Arbex platform.
+    Consumes user events from auth-service via RabbitMQ, sends transactional emails
+    via SMTP using Handlebars templates, and exposes a gRPC API for notification management.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50053
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Consumed Events (auth-events exchange) ───────────────
+
+  user.registered:
+    description: New user registered — sends welcome email
+    subscribe:
+      operationId: consumeUserRegistered
+      summary: Handle user registration
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/UserRegisteredEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+        queue:
+          name: notification-service.events.queue
+          durable: true
+
+  user.verify_email:
+    description: Email verification requested — sends verification link
+    subscribe:
+      operationId: consumeUserVerifyEmail
+      summary: Handle email verification
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/UserVerifyEmailEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.forgot_password:
+    description: Password reset requested — sends reset code email
+    subscribe:
+      operationId: consumeUserForgotPassword
+      summary: Handle forgot password
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/UserForgotPasswordEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.password_changed:
+    description: Password was changed — sends confirmation email
+    subscribe:
+      operationId: consumeUserPasswordChanged
+      summary: Handle password changed
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/UserPasswordChangedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.logged_in:
+    description: User logged in — sends new login alert email
+    subscribe:
+      operationId: consumeUserLoggedIn
+      summary: Handle user login
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/UserLoggedInEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.2fa_enabled:
+    description: 2FA enabled — sends confirmation email
+    subscribe:
+      operationId: consumeUser2faEnabled
+      summary: Handle 2FA activation
+      tags:
+        - name: consumed
+        - name: email
+      message:
+        $ref: '#/components/messages/User2faEnabledEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/GetNotifications:
+    description: Get paginated notifications for a user with optional type and read filters
+    publish:
+      operationId: grpcGetNotifications
+      summary: Get notifications
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/GetNotificationsRequest'
+    subscribe:
+      operationId: grpcGetNotificationsResponse
+      message:
+        $ref: '#/components/messages/GetNotificationsResponse'
+
+  grpc/GetUnreadCount:
+    description: Get unread notification count for a user (cached in Redis, 5 min TTL)
+    publish:
+      operationId: grpcGetUnreadCount
+      summary: Get unread count
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/GetUnreadCountRequest'
+    subscribe:
+      operationId: grpcGetUnreadCountResponse
+      message:
+        $ref: '#/components/messages/GetUnreadCountResponse'
+
+  grpc/MarkAsRead:
+    description: Mark a single notification as read
+    publish:
+      operationId: grpcMarkAsRead
+      summary: Mark as read
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/MarkAsReadRequest'
+    subscribe:
+      operationId: grpcMarkAsReadResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/MarkAllAsRead:
+    description: Mark all notifications as read for a user
+    publish:
+      operationId: grpcMarkAllAsRead
+      summary: Mark all as read
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/AccessTokenRequest'
+    subscribe:
+      operationId: grpcMarkAllAsReadResponse
+      message:
+        $ref: '#/components/messages/MarkAllAsReadResponse'
+
+  grpc/DeleteNotification:
+    description: Delete a notification
+    publish:
+      operationId: grpcDeleteNotification
+      summary: Delete notification
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/DeleteNotificationRequest'
+    subscribe:
+      operationId: grpcDeleteNotificationResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/SendNotification:
+    description: Admin — send a single notification to a user (email or in-app, uses manual.hbs template)
+    publish:
+      operationId: grpcSendNotification
+      summary: Send notification (admin)
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/SendNotificationRequest'
+    subscribe:
+      operationId: grpcSendNotificationResponse
+      message:
+        $ref: '#/components/messages/SendNotificationResponse'
+
+  grpc/GetNotificationStats:
+    description: Admin — aggregate notification stats by type, status, and channel
+    publish:
+      operationId: grpcGetNotificationStats
+      summary: Get stats (admin)
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/GetNotificationStatsRequest'
+    subscribe:
+      operationId: grpcGetNotificationStatsResponse
+      message:
+        $ref: '#/components/messages/GetNotificationStatsResponse'
+
+  grpc/GetDeliveryLog:
+    description: Admin — full delivery audit trail for a notification
+    publish:
+      operationId: grpcGetDeliveryLog
+      summary: Get delivery log (admin)
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/GetDeliveryLogRequest'
+    subscribe:
+      operationId: grpcGetDeliveryLogResponse
+      message:
+        $ref: '#/components/messages/GetDeliveryLogResponse'
+
+components:
+  messages:
+    # ─────── Consumed RabbitMQ Events ───────
+
+    UserRegisteredEvent:
+      name: UserRegisteredEvent
+      title: User Registered
+      description: "Template: welcome.hbs | Type: welcome"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, username]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          username:
+            type: string
+
+    UserVerifyEmailEvent:
+      name: UserVerifyEmailEvent
+      title: Verify Email
+      description: "Template: verify-email.hbs | Type: verify_email"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, verification_token]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          verification_token:
+            type: string
+
+    UserForgotPasswordEvent:
+      name: UserForgotPasswordEvent
+      title: Forgot Password
+      description: "Template: forgot-password.hbs | Type: forgot_password"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, code]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          code:
+            type: string
+            description: 6-digit reset code
+
+    UserPasswordChangedEvent:
+      name: UserPasswordChangedEvent
+      title: Password Changed
+      description: "Template: password-changed.hbs | Type: password_changed"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+
+    UserLoggedInEvent:
+      name: UserLoggedInEvent
+      title: User Logged In
+      description: "Template: new-login.hbs | Type: new_login"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, device, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          device:
+            type: string
+            description: User-Agent string
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    User2faEnabledEvent:
+      name: User2faEnabledEvent
+      title: 2FA Enabled
+      description: "Template: 2fa-enabled.hbs | Type: 2fa_enabled"
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+
+    # ─────── gRPC Messages ───────
+
+    AccessTokenRequest:
+      name: AccessTokenRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    MessageResponse:
+      name: MessageResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    GetNotificationsRequest:
+      name: GetNotificationsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          limit:
+            type: integer
+            default: 20
+            maximum: 100
+          offset:
+            type: integer
+            default: 0
+          type_filter:
+            type: string
+          read_filter:
+            type: string
+
+    GetNotificationsResponse:
+      name: GetNotificationsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          notifications:
+            type: array
+            items:
+              $ref: '#/components/schemas/Notification'
+          total_count:
+            type: integer
+
+    GetUnreadCountRequest:
+      name: GetUnreadCountRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    GetUnreadCountResponse:
+      name: GetUnreadCountResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          count:
+            type: integer
+
+    MarkAsReadRequest:
+      name: MarkAsReadRequest
+      payload:
+        type: object
+        required: [access_token, notification_id]
+        properties:
+          access_token:
+            type: string
+          notification_id:
+            type: string
+
+    MarkAllAsReadResponse:
+      name: MarkAllAsReadResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          updated_count:
+            type: integer
+
+    DeleteNotificationRequest:
+      name: DeleteNotificationRequest
+      payload:
+        type: object
+        required: [access_token, notification_id]
+        properties:
+          access_token:
+            type: string
+          notification_id:
+            type: string
+
+    SendNotificationRequest:
+      name: SendNotificationRequest
+      payload:
+        type: object
+        required: [user_id, email, subject, body]
+        properties:
+          user_id:
+            type: string
+          email:
+            type: string
+            format: email
+          type:
+            type: string
+          channel:
+            type: string
+            enum: [email, in_app]
+            default: email
+          subject:
+            type: string
+          body:
+            type: string
+
+    SendNotificationResponse:
+      name: SendNotificationResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          notification_id:
+            type: string
+
+    GetNotificationStatsRequest:
+      name: GetNotificationStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          start_date:
+            type: string
+          end_date:
+            type: string
+
+    GetNotificationStatsResponse:
+      name: GetNotificationStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          stats:
+            type: object
+
+    GetDeliveryLogRequest:
+      name: GetDeliveryLogRequest
+      payload:
+        type: object
+        required: [access_token, notification_id]
+        properties:
+          access_token:
+            type: string
+          notification_id:
+            type: string
+
+    GetDeliveryLogResponse:
+      name: GetDeliveryLogResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          log:
+            $ref: '#/components/schemas/DeliveryLogEntry'
+
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        type:
+          type: string
+        channel:
+          type: string
+          enum: [email, in_app]
+        title:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: string
+          format: date-time
+        read_at:
+          type: string
+          format: date-time
+
+    DeliveryLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        type:
+          type: string
+        channel:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        recipient_email:
+          type: string
+        template:
+          type: string
+        payload:
+          type: string
+          description: JSON string of original event payload
+        provider_response:
+          type: string
+          description: JSON string of SMTP response
+        status:
+          type: string
+        retry_count:
+          type: integer
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: string
+          format: date-time

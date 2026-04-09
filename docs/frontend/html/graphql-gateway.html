@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GraphQL Gateway — Frontend Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --bg-sidebar:  #090d13;
+      --bg-card:     #161b22;
+      --bg-code:     #1a2030;
+      --bg-hover:    #1f2937;
+      --border:      #21282f;
+      --accent:      #e10098;
+      --accent-dim:  rgba(225, 0, 152, 0.12);
+      --accent-2:    #7c3aed;
+      --blue:        #58a6ff;
+      --green:       #3fb950;
+      --yellow:      #d29922;
+      --red:         #f85149;
+      --orange:      #f0883e;
+      --text:        #e6edf3;
+      --text-muted:  #8b949e;
+      --text-dim:    #6e7681;
+      --sidebar-w:   260px;
+      --radius:      8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+    /* ─────────────────── SIDEBAR ─────────────────── */
+
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .gql-icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .sidebar-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .endpoint-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 10px;
+      margin-top: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .method-badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      padding: 12px 0;
+      flex: 1;
+    }
+
+    .nav-group {
+      margin-bottom: 4px;
+    }
+
+    .nav-group-label {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 20px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 2px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+      border-left-color: var(--border);
+    }
+
+    .nav-link.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+
+    .nav-link .nav-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .nav-link.active .nav-dot { background: var(--accent); }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .badge-auth  { background: rgba(225,0,152,.2); color: var(--accent); }
+    .badge-admin { background: rgba(245,158,11,.15); color: #f59e0b; }
+    .badge-pub   { background: rgba(63,185,80,.15); color: var(--green); }
+
+    /* ─────────────────── MAIN ─────────────────── */
+
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      min-width: 0;
+      padding: 48px 64px;
+      max-width: 960px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .page-title span { color: var(--accent); }
+
+    .page-desc {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: 60px;
+      scroll-margin-top: 24px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title .section-icon {
+      width: 24px; height: 24px;
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .subsection {
+      margin-bottom: 36px;
+      scroll-margin-top: 24px;
+    }
+
+    .subsection-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Prose ── */
+    p { color: var(--text-muted); margin-bottom: 16px; font-size: 14px; }
+    p strong { color: var(--text); }
+    p code, li code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: #f0883e; }
+
+    /* ── Flow indicator ── */
+    .flow-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .flow-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .flow-arrow {
+      color: var(--text-dim);
+      padding: 0 6px;
+      font-size: 14px;
+    }
+
+    /* ── Code blocks ── */
+    .code-block {
+      position: relative;
+      margin-bottom: 20px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: #1e2530;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-lang {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 3px 9px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .copy-btn:hover { color: var(--text); border-color: #484f58; background: var(--bg-hover); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+    .code-block pre {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-code) !important;
+      border-radius: 0;
+    }
+
+    .code-block pre code {
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 12.5px !important;
+      line-height: 1.65 !important;
+      padding: 16px !important;
+      display: block;
+      background: var(--bg-code) !important;
+      overflow-x: auto;
+    }
+
+    /* ── Endpoint box ── */
+    .endpoint-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+
+    .method-pill {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      letter-spacing: 0.3px;
+    }
+
+    .endpoint-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+
+    td code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--orange); }
+    td strong { color: var(--text); font-weight: 500; }
+
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .table-wrap table {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* ── Auth header block ── */
+    .auth-header-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .auth-header-block .key { color: var(--text-dim); }
+    .auth-header-block .val { color: var(--blue); }
+
+    /* ── Directives table ── */
+    .directive-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .directive-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .directive-card .d-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .directive-card .d-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .d-name.auth   { color: var(--accent); }
+    .d-name.admin  { color: #f59e0b; }
+    .d-name.rate   { color: var(--red); }
+
+    /* ── Info / warning callouts ── */
+    .callout {
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { color: var(--text-muted); }
+    .callout-body strong { color: var(--text); }
+
+    .callout-info    { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.2); }
+    .callout-warn    { background: rgba(210,153,34,.08); border: 1px solid rgba(210,153,34,.2); }
+    .callout-success { background: rgba(63,185,80,.08);  border: 1px solid rgba(63,185,80,.2); }
+
+    /* ── Error codes grid ── */
+    .error-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .error-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .error-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .err-unauth  { background: rgba(88,166,255,.15); color: var(--blue); }
+    .err-forb    { background: rgba(248,81,73,.15);  color: var(--red); }
+    .err-input   { background: rgba(210,153,34,.15); color: var(--yellow); }
+    .err-rate    { background: rgba(240,136,62,.15); color: var(--orange); }
+    .err-int     { background: rgba(139,148,158,.15); color: var(--text-muted); }
+
+    .error-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Rate limit table ── */
+    .rate-table { margin-bottom: 24px; }
+    .rate-table .rate-row {
+      display: flex;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .rate-table .rate-row:last-child { border-bottom: none; }
+    .rate-table .rate-op { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--orange); flex: 1; }
+    .rate-table .rate-limit-val {
+      background: rgba(248,81,73,.1);
+      color: var(--red);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .rate-table-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    /* ── Section labels / badges ── */
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .label-auth  { background: rgba(225,0,152,.15); color: var(--accent); }
+    .label-admin { background: rgba(245,158,11,.15); color: #f59e0b; }
+    .label-pub   { background: rgba(63,185,80,.15);  color: var(--green); }
+    .label-rate  { background: rgba(248,81,73,.15);  color: var(--red); }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ── Scroll-to-top ── */
+    .scroll-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 36px; height: 36px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s;
+      z-index: 50;
+    }
+
+    .scroll-top.visible { opacity: 1; pointer-events: all; }
+    .scroll-top:hover { color: var(--text); border-color: #484f58; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; padding: 24px 20px; }
+      .directive-grid { grid-template-columns: 1fr; }
+      .error-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─────────────── SIDEBAR ─────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="gql-icon">GQL</div>
+      <div>
+        <div class="sidebar-title">GraphQL Gateway</div>
+        <div class="sidebar-sub">Frontend Reference</div>
+      </div>
+    </div>
+    <div class="endpoint-pill">
+      <span class="method-badge">POST</span>
+      /graphql
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Getting Started</div>
+      <a href="#quick-start"     class="nav-link active"><span class="nav-dot"></span>Quick Start</a>
+      <a href="#client-setup"    class="nav-link"><span class="nav-dot"></span>Apollo Client Setup</a>
+      <a href="#tokens"          class="nav-link"><span class="nav-dot"></span>Token Management</a>
+      <a href="#errors"          class="nav-link"><span class="nav-dot"></span>Error Handling</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Auth Flows</div>
+      <a href="#flow-login"      class="nav-link"><span class="nav-dot"></span>Standard Login</a>
+      <a href="#flow-2fa"        class="nav-link"><span class="nav-dot"></span>Login with 2FA</a>
+      <a href="#flow-register"   class="nav-link"><span class="nav-dot"></span>Registration</a>
+      <a href="#flow-oauth"      class="nav-link"><span class="nav-dot"></span>Google OAuth</a>
+      <a href="#flow-reset"      class="nav-link"><span class="nav-dot"></span>Password Reset</a>
+      <a href="#flow-change-pw"  class="nav-link"><span class="nav-dot"></span>Change Password</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Queries</div>
+      <a href="#q-public"  class="nav-link"><span class="nav-dot"></span>Public <span class="nav-badge badge-pub">open</span></a>
+      <a href="#q-auth"    class="nav-link"><span class="nav-dot"></span>Authenticated <span class="nav-badge badge-auth">@auth</span></a>
+      <a href="#q-admin"   class="nav-link"><span class="nav-dot"></span>Admin only <span class="nav-badge badge-admin">admin</span></a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Mutations</div>
+      <a href="#m-auth"         class="nav-link"><span class="nav-dot"></span>Auth</a>
+      <a href="#m-2fa"          class="nav-link"><span class="nav-dot"></span>2FA</a>
+      <a href="#m-profile"      class="nav-link"><span class="nav-dot"></span>Profile</a>
+      <a href="#m-notif"        class="nav-link"><span class="nav-dot"></span>Notifications</a>
+      <a href="#m-articles"     class="nav-link"><span class="nav-dot"></span>Articles</a>
+      <a href="#m-subscription" class="nav-link"><span class="nav-dot"></span>Subscription</a>
+      <a href="#m-admin-users"  class="nav-link"><span class="nav-dot"></span>Admin — Users</a>
+      <a href="#m-admin-art"    class="nav-link"><span class="nav-dot"></span>Admin — Articles</a>
+      <a href="#m-admin-cats"   class="nav-link"><span class="nav-dot"></span>Admin — Categories</a>
+      <a href="#m-admin-sub"    class="nav-link"><span class="nav-dot"></span>Admin — Subscriptions</a>
+      <a href="#m-admin-promo"  class="nav-link"><span class="nav-dot"></span>Admin — Promo Codes</a>
+      <a href="#m-admin-notif"  class="nav-link"><span class="nav-dot"></span>Admin — Notifications</a>
+    </div>
+  </nav>
+</nav>
+
+<!-- ─────────────── MAIN ─────────────── -->
+<main class="main">
+
+  <div class="page-header">
+    <h1 class="page-title">GraphQL Gateway <span>API Reference</span></h1>
+    <p class="page-desc">Single entry point for all frontend clients. You never call individual microservices — everything goes through one GraphQL endpoint. The gateway handles authentication, authorization, and routing to the correct backend service.</p>
+  </div>
+
+  <!-- ──────────── QUICK START ──────────── -->
+  <section class="section" id="quick-start">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(225,0,152,.15);">⚡</span>
+      Quick Start
+    </h2>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Endpoint</h3>
+      <div class="endpoint-box">
+        <span class="method-pill">POST</span>
+        <span class="endpoint-url">https://api.arbex.com/graphql</span>
+      </div>
+      <p>All queries and mutations are sent to this single endpoint as HTTP POST requests with a JSON body.</p>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Minimal fetch call</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-javascript">const res = await fetch('https://api.arbex.com/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `query { articles(limit: 10) { success articles { id title slug } } }`
+  })
+});
+const { data, errors } = await res.json();</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── CLIENT SETUP ──────────── -->
+  <section class="section" id="client-setup">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(124,58,237,.15);">🔧</span>
+      Apollo Client Setup <span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:6px;">recommended</span>
+    </h2>
+
+    <p>Set this up once. It automatically attaches the token to every request and silently refreshes it when it expires.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">ts — lib/apollo.ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code class="language-typescript">import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+import { onError } from '@apollo/client/link/error';
+
+const httpLink = createHttpLink({ uri: 'https://api.arbex.com/graphql' });
+
+// Attach access token to every request
+const authLink = setContext((_, { headers }) => {
+  const token = localStorage.getItem('accessToken');
+  return {
+    headers: {
+      ...headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  };
+});
+
+// Handle expired token — refresh silently, then retry
+const errorLink = onError(({ graphQLErrors, operation, forward }) => {
+  const isUnauthenticated = graphQLErrors?.some(e => e.extensions?.code === 'UNAUTHENTICATED');
+  if (isUnauthenticated) {
+    return new Observable(observer => {
+      refreshTokens().then(newToken => {
+        if (!newToken) { signOut(); return; }
+        operation.setContext(({ headers }) => ({
+          headers: { ...headers, Authorization: `Bearer ${newToken}` },
+        }));
+        forward(operation).subscribe(observer);
+      });
+    });
+  }
+});
+
+export const client = new ApolloClient({
+  link: from([errorLink, authLink, httpLink]),
+  cache: new InMemoryCache(),
+});</code></pre>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── TOKEN MANAGEMENT ──────────── -->
+  <section class="section" id="tokens">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(88,166,255,.15);">🔑</span>
+      Token Management
+    </h2>
+
+    <div class="auth-header-block">
+      <span class="key">Authorization: </span><span class="val">Bearer &lt;access_token&gt;</span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Lifetime</th><th>Where to store</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>accessToken</code></td>
+            <td>1 hour</td>
+            <td>Memory / localStorage</td>
+            <td>Sent as <code>Authorization</code> header on every request</td>
+          </tr>
+          <tr>
+            <td><code>refreshToken</code></td>
+            <td>30 days</td>
+            <td>HttpOnly cookie</td>
+            <td>Used only to get a new <code>accessToken</code> when it expires</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">ts — auth.ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code class="language-typescript">export function saveTokens(accessToken: string, refreshToken: string) {
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+}
+
+export function clearTokens() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+}
+
+export async function refreshTokens(): Promise&lt;string | null&gt; {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return null;
+
+  const res = await fetch('https://api.arbex.com/graphql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: `mutation RefreshTokens($refreshToken: String!) {
+        refreshTokens(refreshToken: $refreshToken) { accessToken refreshToken }
+      }`,
+      variables: { refreshToken },
+    }),
+  });
+
+  const { data } = await res.json();
+  if (!data?.refreshTokens) return null;
+
+  saveTokens(data.refreshTokens.accessToken, data.refreshTokens.refreshToken);
+  return data.refreshTokens.accessToken;
+}</code></pre>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── ERROR HANDLING ──────────── -->
+  <section class="section" id="errors">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(248,81,73,.15);">⚠</span>
+      Error Handling
+    </h2>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">GraphQL always returns <strong>HTTP 200</strong>. Check the <code>errors</code> array in the response body — a non-null <code>errors</code> means something went wrong even if <code>data</code> is also present.</div>
+    </div>
+
+    <div class="error-grid">
+      <div class="error-card">
+        <span class="error-code err-unauth">UNAUTHENTICATED</span>
+        <div class="error-desc">Token missing or expired. Redirect to login or refresh silently.</div>
+      </div>
+      <div class="error-card">
+        <span class="error-code err-forb">FORBIDDEN</span>
+        <div class="error-desc">Token valid but insufficient permissions, or account banned.</div>
+      </div>
+      <div class="error-card">
+        <span class="error-code err-input">BAD_USER_INPUT</span>
+        <div class="error-desc">Validation failed. Show <code>err.message</code> to the user.</div>
+      </div>
+      <div class="error-card">
+        <span class="error-code err-rate">RATE_LIMITED</span>
+        <div class="error-desc">Too many requests within the time window. Show a cooldown message.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">ts — error handling</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code class="language-typescript">const { data, error } = useMutation(LOGIN_MUTATION);
+
+if (error?.graphQLErrors) {
+  for (const err of error.graphQLErrors) {
+    switch (err.extensions?.code) {
+      case 'UNAUTHENTICATED': redirect('/login'); break;
+      case 'FORBIDDEN':       showBannedMessage(); break;
+      case 'BAD_USER_INPUT':  showValidationError(err.message); break;
+      case 'RATE_LIMITED':    showMessage('Too many attempts, wait a moment'); break;
+    }
+  }
+}</code></pre>
+    </div>
+
+    <h3 class="subsection-title" style="margin-top:24px;">Rate Limits</h3>
+    <div class="rate-table-wrap">
+      <div class="rate-table">
+        <div class="rate-row"><span class="rate-op">register</span><span class="rate-limit-val">5 / min</span></div>
+        <div class="rate-row"><span class="rate-op">login</span><span class="rate-limit-val">10 / min</span></div>
+        <div class="rate-row"><span class="rate-op">forgotPassword, resetPassword</span><span class="rate-limit-val">3 / min</span></div>
+        <div class="rate-row"><span class="rate-op">createCheckout</span><span class="rate-limit-val">5 / min</span></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── AUTH FLOWS ──────────── -->
+  <section class="section" id="auth-flows">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(225,0,152,.15);">🔐</span>
+      Auth Flows
+    </h2>
+
+    <!-- Standard Login -->
+    <div class="subsection" id="flow-login">
+      <h3 class="subsection-title">Standard Login</h3>
+      <div class="flow-indicator">
+        <span class="flow-step">login</span><span class="flow-arrow">→</span>
+        <span class="flow-step">save tokens</span><span class="flow-arrow">→</span>
+        <span class="flow-step">redirect to app</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const LOGIN = gql`
+  mutation Login($emailUsername: String!, $password: String!) {
+    login(emailUsername: $emailUsername, password: $password) {
+      success
+      requires2FA
+      user { id email username }
+      tokens { accessToken refreshToken expiresIn }
+    }
+  }
+`;
+
+const [login] = useMutation(LOGIN);
+
+async function handleLogin(emailUsername: string, password: string) {
+  const { data } = await login({ variables: { emailUsername, password } });
+
+  if (data.login.requires2FA) {
+    // Store the short-lived token (valid 5 min), redirect to 2FA screen
+    saveTokens(data.login.tokens.accessToken, '');
+    router.push('/2fa');
+    return;
+  }
+
+  saveTokens(data.login.tokens.accessToken, data.login.tokens.refreshToken);
+  router.push('/dashboard');
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- 2FA -->
+    <div class="subsection" id="flow-2fa">
+      <h3 class="subsection-title">Login with 2FA</h3>
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ</span>
+        <div class="callout-body">After <code>login</code> returns <code>requires2FA: true</code>, a short-lived <code>accessToken</code> (5 min) is returned. Store it and use it to call <code>verify2FA</code>. On success, swap it for the full session tokens.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const VERIFY_2FA = gql`
+  mutation Verify2FA($code: String!) {
+    verify2FA(code: $code) {
+      success
+      message
+      accessToken
+      refreshToken
+    }
+  }
+`;
+
+// Called from the 2FA code input screen
+async function handleVerify2FA(code: string) {
+  const { data } = await verify2FA({ variables: { code } });
+  // Replace short-lived token with full session tokens
+  saveTokens(data.verify2FA.accessToken, data.verify2FA.refreshToken);
+  router.push('/dashboard');
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Registration -->
+    <div class="subsection" id="flow-register">
+      <h3 class="subsection-title">Registration</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const REGISTER = gql`
+  mutation Register($email: String!, $username: String!, $password: String!, $fingerprint: String) {
+    register(email: $email, username: $username, password: $password, fingerprint: $fingerprint) {
+      success
+      user { id email username }
+      tokens { accessToken refreshToken expiresIn }
+    }
+  }
+`;
+
+// FingerprintJS visitorId — used for trial abuse detection, send if available
+const { data } = await register({
+  variables: { email, username, password, fingerprint: await getFingerprint() }
+});
+saveTokens(data.register.tokens.accessToken, data.register.tokens.refreshToken);</code></pre>
+      </div>
+    </div>
+
+    <!-- Google OAuth -->
+    <div class="subsection" id="flow-oauth">
+      <h3 class="subsection-title">Google OAuth</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">// 1. Redirect user to Google, get back `code` and `state` in the callback URL
+// 2. Exchange them here:
+
+const OIDC_LOGIN = gql`
+  mutation OIDCLogin($code: String!, $provider: String!, $state: String!) {
+    oidcLogin(code: $code, provider: $provider, state: $state) {
+      success
+      user { id email externalId provider }
+      tokens { accessToken refreshToken }
+    }
+  }
+`;
+
+const { data } = await oidcLogin({ variables: { code, provider: 'google', state } });
+saveTokens(data.oidcLogin.tokens.accessToken, data.oidcLogin.tokens.refreshToken);</code></pre>
+      </div>
+    </div>
+
+    <!-- Password Reset -->
+    <div class="subsection" id="flow-reset">
+      <h3 class="subsection-title">Password Reset Flow</h3>
+      <div class="flow-indicator">
+        <span class="flow-step">forgotPassword</span><span class="flow-arrow">→</span>
+        <span class="flow-step">user gets email with code</span><span class="flow-arrow">→</span>
+        <span class="flow-step">verifyResetCode</span><span class="flow-arrow">→</span>
+        <span class="flow-step">resetPassword</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">// Step 1 — request reset code
+await forgotPassword({ variables: { email } });
+// Always shows success to prevent email enumeration
+
+// Step 2 — validate code before showing the new-password form
+const { data } = await verifyResetCode({ variables: { email, code } });
+if (!data.verifyResetCode.success) showError('Invalid or expired code');
+
+// Step 3 — set new password (consumes the code)
+await resetPassword({ variables: { email, code, newPassword } });</code></pre>
+      </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="subsection" id="flow-change-pw">
+      <h3 class="subsection-title">Change Password (authenticated)</h3>
+      <div class="flow-indicator">
+        <span class="flow-step">requestPasswordChange</span><span class="flow-arrow">→</span>
+        <span class="flow-step">user gets email link</span><span class="flow-arrow">→</span>
+        <span class="flow-step">confirmPasswordChange</span>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">// Step 1 — triggers an email to the logged-in user
+await requestPasswordChange(); // no args — identity comes from the JWT
+
+// Step 2 — user clicks link in email, link contains ?token=xxx
+await confirmPasswordChange({ variables: { token, newPassword } });</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── QUERIES ──────────── -->
+  <section class="section" id="queries">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(63,185,80,.15);">◎</span>
+      Queries Reference
+    </h2>
+
+    <!-- Public -->
+    <div class="subsection" id="q-public">
+      <h3 class="subsection-title"><span class="label label-pub">public</span> No auth required</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">// Single article — fetch by ID or slug (one is enough)
+const GET_ARTICLE = gql`
+  query GetArticle($slug: String) {
+    article(slug: $slug) {
+      success
+      article { id title slug content authorId coverImageUrl viewCount publishedAt tags categories { id name } }
+    }
+  }
+`;
+
+// Article list with pagination + filters
+const GET_ARTICLES = gql`
+  query GetArticles($page: Int, $limit: Int, $categoryId: Int) {
+    articles(page: $page, limit: $limit, categoryId: $categoryId) {
+      success
+      articles { id title slug coverImageUrl publishedAt }
+      pagination { page limit total totalPages }
+    }
+  }
+`;
+
+// Full-text search
+const SEARCH_ARTICLES = gql`
+  query SearchArticles($query: String!, $page: Int, $limit: Int) {
+    searchArticles(query: $query, page: $page, limit: $limit) {
+      success
+      articles { id title slug publishedAt }
+      pagination { total totalPages }
+    }
+  }
+`;
+
+// Categories
+const GET_CATEGORIES = gql`
+  query GetCategories {
+    categories {
+      success
+      categories { id name slug description parentId }
+    }
+  }
+`;
+
+// Public profile
+const GET_PROFILE = gql`
+  query GetProfile($userId: String!) {
+    profile(userId: $userId) { userId username displayName avatarUrl }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Authenticated -->
+    <div class="subsection" id="q-auth">
+      <h3 class="subsection-title"><span class="label label-auth">@auth</span> Authenticated</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">// Own profile
+const ME = gql`
+  query Me {
+    me { userId username displayName avatarUrl }
+  }
+`;
+
+// Notification inbox
+const GET_NOTIFICATIONS = gql`
+  query GetNotifications($limit: Int, $offset: Int, $readFilter: String) {
+    notifications(limit: $limit, offset: $offset, readFilter: $readFilter) {
+      success
+      totalCount
+      notifications { id type title body read createdAt sentAt }
+    }
+  }
+`;
+
+// Unread badge count
+const UNREAD_COUNT = gql`
+  query UnreadCount {
+    unreadCount { success count }
+  }
+`;
+
+// Current subscription
+const MY_SUBSCRIPTION = gql`
+  query MySubscription {
+    mySubscription {
+      success
+      subscription { id subType freeTrial status startedAt endedAt gracePeriodEnd }
+    }
+  }
+`;
+
+// Validate promo code before checkout
+const VALIDATE_PROMO = gql`
+  query ValidatePromoCode($code: String!, $planType: Int!, $durationMonths: Int!) {
+    validatePromoCode(code: $code, planType: $planType, durationMonths: $durationMonths) {
+      success valid discountType discountValue discountAmountCents finalPriceCents message
+    }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin -->
+    <div class="subsection" id="q-admin">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Admin only</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const DASHBOARD_STATS = gql`
+  query DashboardStats {
+    dashboardStats {
+      success totalUsers totalBanned totalArticles totalCategories totalViews articlesToday usersToday
+    }
+  }
+`;
+
+const ADMIN_USERS = gql`
+  query AdminUsers($page: Int, $limit: Int, $search: String, $role: Int, $status: Int) {
+    adminUsers(page: $page, limit: $limit, search: $search, role: $role, status: $status) {
+      success
+      users { id email username role status createdAt bannedAt banReason }
+      pagination { page limit total totalPages }
+    }
+  }
+  # role:   -1 = all | 0 = user | 1 = admin
+  # status: -1 = all | 0 = active | 1 = banned
+`;
+
+const ADMIN_USER = gql`
+  query AdminUser($userId: String!) {
+    adminUser(userId: $userId) {
+      success
+      user { id email username role status bannedAt banReason createdAt }
+    }
+  }
+`;
+
+const SUBSCRIPTION_STATS = gql`
+  query SubscriptionStats {
+    subscriptionStats {
+      success totalActive totalExpired totalCanceled totalTerminated
+      byTier { tier count }
+    }
+  }
+`;
+
+const ADMIN_ARTICLE_STATS = gql`
+  query AdminArticleStats {
+    adminArticleStats { success totalArticles totalBlog totalNews totalViews }
+  }
+`;</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ──────────── MUTATIONS ──────────── -->
+  <section class="section" id="mutations">
+    <h2 class="section-title">
+      <span class="section-icon" style="background:rgba(88,166,255,.15);">✦</span>
+      Mutations Reference
+    </h2>
+
+    <!-- Auth -->
+    <div class="subsection" id="m-auth">
+      <h3 class="subsection-title">Auth</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const LOGOUT = gql`
+  mutation Logout($refreshToken: String!) {
+    logout(refreshToken: $refreshToken) { success message }
+  }
+`;
+
+const REFRESH_TOKENS = gql`
+  mutation RefreshTokens($refreshToken: String!) {
+    refreshTokens(refreshToken: $refreshToken) { accessToken refreshToken }
+  }
+`;
+
+const VERIFY_EMAIL = gql`
+  mutation VerifyEmail($token: String!) {
+    verifyEmail(token: $token) { success message }
+  }
+`;
+
+const FORGOT_PASSWORD = gql`
+  mutation ForgotPassword($email: String!) {
+    forgotPassword(email: $email) { success message }
+  }
+`;
+
+const VERIFY_RESET_CODE = gql`
+  mutation VerifyResetCode($email: String!, $code: String!) {
+    verifyResetCode(email: $email, code: $code) { success message }
+  }
+`;
+
+const RESET_PASSWORD = gql`
+  mutation ResetPassword($email: String!, $code: String!, $newPassword: String!) {
+    resetPassword(email: $email, code: $code, newPassword: $newPassword) { success message }
+  }
+`;
+
+const REQUEST_PASSWORD_CHANGE = gql`
+  mutation { requestPasswordChange { success message } }
+`;
+
+const CONFIRM_PASSWORD_CHANGE = gql`
+  mutation ConfirmPasswordChange($token: String!, $newPassword: String!) {
+    confirmPasswordChange(token: $token, newPassword: $newPassword) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- 2FA -->
+    <div class="subsection" id="m-2fa">
+      <h3 class="subsection-title">2FA</h3>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠</span>
+        <div class="callout-body">Show <code>backupCodes</code> exactly <strong>once</strong> after setup — they are not stored in plain text and cannot be recovered. User must save them before leaving the page.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const SETUP_2FA = gql`
+  mutation {
+    setup2FA {
+      success
+      qrCode      # base64 PNG — render as: &lt;img src={qrCode} /&gt;
+      secret      # display for manual authenticator entry
+      backupCodes # show ONCE, user must save these
+    }
+  }
+`;
+
+const VERIFY_2FA = gql`
+  mutation Verify2FA($code: String!) {
+    verify2FA(code: $code) { success message accessToken refreshToken }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="subsection" id="m-profile">
+      <h3 class="subsection-title">Profile</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const UPDATE_PROFILE = gql`
+  mutation UpdateProfile($username: String, $displayName: String) {
+    updateProfile(username: $username, displayName: $displayName) {
+      success message
+      profile { userId username displayName avatarUrl }
+    }
+  }
+`;
+
+// Convert file to base64 before sending
+const UPLOAD_AVATAR = gql`
+  mutation UploadAvatar($imageBase64: String!, $contentType: String!, $fileName: String!) {
+    uploadAvatar(imageBase64: $imageBase64, contentType: $contentType, fileName: $fileName) {
+      success message avatarUrl
+      profile { userId avatarUrl }
+    }
+  }
+`;
+
+// Example: file input → base64
+async function handleAvatarUpload(file: File) {
+  const base64 = await fileToBase64(file); // strip the data:image/...;base64, prefix
+  await uploadAvatar({ variables: { imageBase64: base64, contentType: file.type, fileName: file.name } });
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="subsection" id="m-notif">
+      <h3 class="subsection-title">Notifications</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const MARK_AS_READ = gql`
+  mutation MarkAsRead($notificationId: String!) {
+    markAsRead(notificationId: $notificationId) { success message }
+  }
+`;
+
+const MARK_ALL_AS_READ = gql`
+  mutation { markAllAsRead { success message updatedCount } }
+`;
+
+const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($notificationId: String!) {
+    deleteNotification(notificationId: $notificationId) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Articles -->
+    <div class="subsection" id="m-articles">
+      <h3 class="subsection-title">Articles (authenticated user)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const CREATE_ARTICLE = gql`
+  mutation CreateArticle($title: String!, $content: String!, $categoryId: Int!, $tags: [String!], $coverImageUrl: String, $status: Int) {
+    createArticle(title: $title, content: $content, categoryId: $categoryId, tags: $tags, coverImageUrl: $coverImageUrl, status: $status) {
+      success
+      article { id title slug publishedAt }
+    }
+  }
+`;
+
+const UPDATE_ARTICLE = gql`
+  mutation UpdateArticle($id: String!, $title: String, $content: String, $categoryId: Int, $tags: [String!], $coverImageUrl: String, $status: Int) {
+    updateArticle(id: $id, title: $title, content: $content, categoryId: $categoryId, tags: $tags, coverImageUrl: $coverImageUrl, status: $status) {
+      success
+      article { id title slug updatedAt }
+    }
+  }
+`;
+
+const DELETE_ARTICLE = gql`
+  mutation DeleteArticle($id: String!) {
+    deleteArticle(id: $id) { success message }
+  }
+`;
+
+// Get a pre-signed URL → upload image directly from browser → use fileUrl as coverImageUrl
+const GET_UPLOAD_URL = gql`
+  mutation GetUploadUrl($filename: String!, $contentType: String!, $articleId: String) {
+    getUploadUrl(filename: $filename, contentType: $contentType, articleId: $articleId) {
+      success uploadUrl fileUrl expiresIn
+    }
+  }
+`;
+
+// After getting uploadUrl, PUT the file directly to S3:
+async function uploadCoverImage(file: File, articleId?: string) {
+  const { data } = await getUploadUrl({ variables: { filename: file.name, contentType: file.type, articleId } });
+  await fetch(data.getUploadUrl.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+  return data.getUploadUrl.fileUrl; // use this as coverImageUrl
+}</code></pre>
+      </div>
+    </div>
+
+    <!-- Subscription -->
+    <div class="subsection" id="m-subscription">
+      <h3 class="subsection-title">Subscription</h3>
+      <div class="table-wrap" style="margin-bottom:16px;">
+        <table>
+          <thead><tr><th>Field</th><th>Values</th></tr></thead>
+          <tbody>
+            <tr><td><code>planType</code></td><td><code>1</code> = Lite &nbsp;·&nbsp; <code>2</code> = Standard &nbsp;·&nbsp; <code>3</code> = PRO</td></tr>
+            <tr><td><code>paymentMethod</code></td><td><code>"crypto"</code> &nbsp;·&nbsp; <code>"card"</code></td></tr>
+            <tr><td><code>durationMonths</code></td><td><code>1</code> &nbsp;·&nbsp; <code>3</code> &nbsp;·&nbsp; <code>6</code> &nbsp;·&nbsp; <code>12</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const CREATE_CHECKOUT = gql`
+  mutation CreateCheckout($planType: Int!, $paymentMethod: String!, $durationMonths: Int!, $promoCode: String) {
+    createCheckout(planType: $planType, paymentMethod: $paymentMethod, durationMonths: $durationMonths, promoCode: $promoCode) {
+      success
+      paymentUrl   # redirect user here
+      orderId
+      expiresIn
+      proration { remainingDays remainingValueCents newPlanPriceCents discountCents finalPriceCents }
+    }
+  }
+`;
+
+const CANCEL_SUBSCRIPTION = gql`
+  mutation { cancelSubscription { success subscription { status endedAt } } }
+`;
+
+const RESTORE_SUBSCRIPTION = gql`
+  mutation { restoreSubscription { success subscription { status endedAt } } }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Users -->
+    <div class="subsection" id="m-admin-users">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> User Management</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const UPDATE_USER_ROLE = gql`
+  mutation UpdateUserRole($userId: String!, $role: Int!) {
+    updateUserRole(userId: $userId, role: $role) { success message user { id role } }
+  }
+  # role: 0 = user | 1 = admin
+`;
+
+const BAN_USER = gql`
+  mutation BanUser($userId: String!, $reason: String) {
+    banUser(userId: $userId, reason: $reason) { success message }
+  }
+`;
+
+const UNBAN_USER = gql`
+  mutation UnbanUser($userId: String!) {
+    unbanUser(userId: $userId) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Articles -->
+    <div class="subsection" id="m-admin-art">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Articles</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const ADMIN_CREATE_ARTICLE = gql`
+  mutation AdminCreateArticle($title: String!, $content: String!, $type: String!, $coverImageUrl: String, $categories: [String!]) {
+    adminCreateArticle(title: $title, content: $content, type: $type, coverImageUrl: $coverImageUrl, categories: $categories) {
+      success article { id title slug type }
+    }
+  }
+  # type: "blog" | "news"
+`;
+
+const ADMIN_DELETE_ARTICLE = gql`
+  mutation AdminDeleteArticle($articleId: String!) {
+    adminDeleteArticle(articleId: $articleId) { success message }
+  }
+`;
+
+const ADMIN_GET_UPLOAD_URL = gql`
+  mutation AdminGetUploadUrl($filename: String!, $contentType: String!, $articleId: String) {
+    adminGetUploadUrl(filename: $filename, contentType: $contentType, articleId: $articleId) {
+      success uploadUrl fileUrl expiresIn
+    }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Categories -->
+    <div class="subsection" id="m-admin-cats">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Categories</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const CREATE_CATEGORY = gql`
+  mutation CreateCategory($name: String!, $description: String, $parentId: Int) {
+    createCategory(name: $name, description: $description, parentId: $parentId) {
+      success category { id name slug }
+    }
+  }
+`;
+
+const UPDATE_CATEGORY = gql`
+  mutation UpdateCategory($id: Int!, $name: String, $description: String, $parentId: Int) {
+    updateCategory(id: $id, name: $name, description: $description, parentId: $parentId) {
+      success category { id name slug }
+    }
+  }
+`;
+
+const DELETE_CATEGORY = gql`
+  mutation DeleteCategory($id: Int!) {
+    deleteCategory(id: $id) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Subscriptions -->
+    <div class="subsection" id="m-admin-sub">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Subscriptions</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const ADMIN_SET_SUBSCRIPTION = gql`
+  mutation AdminSetSubscription($userId: String!, $subType: Int!, $durationMonths: Int!, $issuedBy: String!) {
+    adminSetSubscription(userId: $userId, subType: $subType, durationMonths: $durationMonths, issuedBy: $issuedBy) {
+      success subscription { id subType status startedAt endedAt }
+    }
+  }
+`;
+
+const ADMIN_REMOVE_SUBSCRIPTION = gql`
+  mutation AdminRemoveSubscription($userId: String!, $reason: String) {
+    adminRemoveSubscription(userId: $userId, reason: $reason) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Promo -->
+    <div class="subsection" id="m-admin-promo">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Promo Codes</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const ADMIN_CREATE_PROMO = gql`
+  mutation AdminCreatePromoCode($code: String!, $discountType: String!, $discountValue: Int!, $maxUses: Int, $applicableTiers: [Int!], $minDurationMonths: Int, $validUntil: String) {
+    adminCreatePromoCode(code: $code, discountType: $discountType, discountValue: $discountValue, maxUses: $maxUses, applicableTiers: $applicableTiers, minDurationMonths: $minDurationMonths, validUntil: $validUntil) {
+      success promoCode { id code discountType discountValue maxUses active }
+    }
+  }
+  # discountType: "percentage" | "fixed"
+  # maxUses: 0 = unlimited
+`;
+
+const ADMIN_LIST_PROMOS = gql`
+  mutation AdminListPromoCodes($page: Int, $limit: Int, $activeOnly: Boolean) {
+    adminListPromoCodes(page: $page, limit: $limit, activeOnly: $activeOnly) {
+      success promoCodes { id code discountValue usedCount maxUses active validUntil } total
+    }
+  }
+`;
+
+const ADMIN_DEACTIVATE_PROMO = gql`
+  mutation AdminDeactivatePromoCode($code: String!) {
+    adminDeactivatePromoCode(code: $code) { success message }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+    <!-- Admin Notifications -->
+    <div class="subsection" id="m-admin-notif">
+      <h3 class="subsection-title"><span class="label label-admin">admin</span> Notifications</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">ts</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <pre><code class="language-typescript">const ADMIN_SEND_NOTIFICATION = gql`
+  mutation AdminSendNotification($userId: String!, $email: String!, $subject: String!, $body: String!, $channel: String) {
+    adminSendNotification(userId: $userId, email: $email, subject: $subject, body: $body, channel: $channel) {
+      success message notificationId
+    }
+  }
+  # channel: "email" (default) | "in_app"
+`;
+
+const ADMIN_SEND_BULK = gql`
+  mutation AdminSendBulkNotification($subject: String!, $body: String!, $channel: String, $recipients: [BulkRecipientInput!]) {
+    adminSendBulkNotification(subject: $subject, body: $body, channel: $channel, recipients: $recipients) {
+      success message total sent failed
+    }
+  }
+`;</code></pre>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- Scroll to top -->
+<div class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+<script>
+  // ── Syntax highlighting
+  hljs.highlightAll();
+
+  // ── Copy button
+  function copyCode(btn) {
+    const code = btn.closest('.code-block').querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ── Active nav on scroll
+  const sections = document.querySelectorAll('[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (active) {
+          active.classList.add('active');
+          active.scrollIntoView({ block: 'nearest' });
+        }
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ── Scroll to top visibility
+  const scrollTop = document.getElementById('scrollTop');
+  window.addEventListener('scroll', () => {
+    scrollTop.classList.toggle('visible', window.scrollY > 400);
+  });
+</script>
+</body>
+</html>

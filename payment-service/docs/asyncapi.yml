@@ -1,0 +1,365 @@
+asyncapi: 2.6.0
+
+info:
+  title: Payment Service
+  version: 1.0.0
+  description: |
+    Payment processing microservice for the Arbex platform.
+    Supports cryptocurrency payments (Cryptomus) and card payments (Fondy).
+    Publishes payment lifecycle events to RabbitMQ, exposes a gRPC API on port 50057,
+    and an HTTP server on port 3001 for payment provider webhooks.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50057
+    protocol: grpc
+    description: gRPC server
+  http:
+    url: localhost:3001
+    protocol: http
+    description: HTTP webhook server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Published Events (payment-events exchange) ───────────────
+
+  payment.succeeded:
+    description: Emitted when a payment is confirmed by the provider (Cryptomus or Fondy)
+    publish:
+      operationId: publishPaymentSucceeded
+      summary: Payment succeeded
+      tags:
+        - name: payment
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/PaymentSucceededEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: payment-events
+          type: topic
+          durable: true
+
+  payment.failed:
+    description: Emitted when a payment fails or is rejected by the provider
+    publish:
+      operationId: publishPaymentFailed
+      summary: Payment failed
+      tags:
+        - name: payment
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/PaymentFailedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: payment-events
+          type: topic
+          durable: true
+
+  payment.refunded:
+    description: Emitted when a payment is refunded by the provider
+    publish:
+      operationId: publishPaymentRefunded
+      summary: Payment refunded
+      tags:
+        - name: payment
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/PaymentRefundedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: payment-events
+          type: topic
+          durable: true
+
+  # ─────────────── HTTP Webhook Endpoints ───────────────
+
+  webhook/cryptomus:
+    description: "POST /webhook/cryptomus — Cryptomus payment status callback. Always returns 200."
+    subscribe:
+      operationId: handleCryptomusWebhook
+      summary: Cryptomus webhook
+      tags:
+        - name: webhook
+        - name: crypto
+      message:
+        $ref: '#/components/messages/CryptomusWebhookPayload'
+
+  webhook/fondy:
+    description: "POST /webhook/fondy — Fondy card payment status callback. Always returns 200."
+    subscribe:
+      operationId: handleFondyWebhook
+      summary: Fondy webhook
+      tags:
+        - name: webhook
+        - name: card
+      message:
+        $ref: '#/components/messages/FondyWebhookPayload'
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/CreatePayment:
+    description: Create a payment session — returns a redirect URL for the chosen provider
+    publish:
+      operationId: grpcCreatePayment
+      summary: Create payment
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/CreatePaymentRequest'
+    subscribe:
+      operationId: grpcCreatePaymentResponse
+      message:
+        $ref: '#/components/messages/CreatePaymentResponse'
+
+  grpc/GetTransaction:
+    description: Get a single transaction by ID
+    publish:
+      operationId: grpcGetTransaction
+      summary: Get transaction
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/GetTransactionRequest'
+    subscribe:
+      operationId: grpcGetTransactionResponse
+      message:
+        $ref: '#/components/messages/TransactionResponse'
+
+  grpc/ListTransactions:
+    description: Paginated transaction list with user, status, and provider filters
+    publish:
+      operationId: grpcListTransactions
+      summary: List transactions
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/ListTransactionsRequest'
+    subscribe:
+      operationId: grpcListTransactionsResponse
+      message:
+        $ref: '#/components/messages/ListTransactionsResponse'
+
+components:
+  messages:
+    # ─────── RabbitMQ Event Messages ───────
+
+    PaymentSucceededEvent:
+      name: PaymentSucceededEvent
+      title: Payment Succeeded Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, plan_type, amount, currency, provider, transaction_id, order_id, duration_months]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          amount:
+            type: integer
+            description: Amount in cents
+          currency:
+            type: string
+          provider:
+            type: string
+            description: '"cryptomus" or "fondy"'
+          transaction_id:
+            type: string
+          order_id:
+            type: string
+          duration_months:
+            type: integer
+
+    PaymentFailedEvent:
+      name: PaymentFailedEvent
+      title: Payment Failed Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, plan_type, provider, transaction_id]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          provider:
+            type: string
+          transaction_id:
+            type: string
+          reason:
+            type: string
+
+    PaymentRefundedEvent:
+      name: PaymentRefundedEvent
+      title: Payment Refunded Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, plan_type, amount, provider, transaction_id]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          amount:
+            type: integer
+            description: Refunded amount in cents
+          provider:
+            type: string
+          transaction_id:
+            type: string
+
+    # ─────── Webhook Payloads ───────
+
+    CryptomusWebhookPayload:
+      name: CryptomusWebhookPayload
+      title: Cryptomus Webhook
+      description: Payment status callback from Cryptomus. Signature verified via HMAC.
+      contentType: application/json
+      payload:
+        type: object
+        description: Provider-specific payload — see Cryptomus API docs
+
+    FondyWebhookPayload:
+      name: FondyWebhookPayload
+      title: Fondy Webhook
+      description: Payment status callback from Fondy. Signature verified via merchant password.
+      contentType: application/json
+      payload:
+        type: object
+        description: Provider-specific payload — see Fondy API docs
+
+    # ─────── gRPC Request/Response Messages ───────
+
+    CreatePaymentRequest:
+      name: CreatePaymentRequest
+      payload:
+        type: object
+        required: [user_id, plan_type, payment_method, amount, order_id, duration_months]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          payment_method:
+            type: string
+            description: '"cryptomus" or "fondy"'
+          currency:
+            type: string
+          amount:
+            type: integer
+            description: Amount in cents
+          order_id:
+            type: string
+          duration_months:
+            type: integer
+
+    CreatePaymentResponse:
+      name: CreatePaymentResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          payment_url:
+            type: string
+            description: Redirect URL for the payment provider
+          order_id:
+            type: string
+          expires_in:
+            type: integer
+            description: Seconds until payment URL expires
+
+    GetTransactionRequest:
+      name: GetTransactionRequest
+      payload:
+        type: object
+        required: [access_token, id]
+        properties:
+          access_token:
+            type: string
+          id:
+            type: string
+
+    TransactionResponse:
+      name: TransactionResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          transaction:
+            $ref: '#/components/schemas/Transaction'
+
+    ListTransactionsRequest:
+      name: ListTransactionsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          status:
+            type: string
+          page:
+            type: integer
+          limit:
+            type: integer
+
+    ListTransactionsResponse:
+      name: ListTransactionsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          transactions:
+            type: array
+            items:
+              $ref: '#/components/schemas/Transaction'
+          total:
+            type: integer
+
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        provider:
+          type: string
+        provider_order_id:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+        plan_type:
+          type: integer
+        duration_months:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

@@ -1,0 +1,238 @@
+services:
+  # ── Infrastructure ──────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: arbex-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arbex-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: arbex-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - arbex-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: arbex-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - arbex-net
+
+  minio:
+    image: minio/minio
+    container_name: arbex-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - arbex-net
+
+  # ── Application Services ────────────────────────────────────
+  auth-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/auth-service:${TAG:-latest}
+    container_name: arbex-auth
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    env_file:
+      - ./auth-service/.env
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  user-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/user-service:${TAG:-latest}
+    container_name: arbex-user
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    ports:
+      - "50052:50052"
+    env_file:
+      - ./user-service/.env
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  notification-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/notification-service:${TAG:-latest}
+    container_name: arbex-notification
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "50053:50053"
+    env_file:
+      - ./notification-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  admin-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/admin-service:${TAG:-latest}
+    container_name: arbex-admin
+    build:
+      context: ./admin-service
+      dockerfile: Dockerfile
+    ports:
+      - "50055:50055"
+    env_file:
+      - ./admin-service/.env
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  subscription-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/subscription-service:${TAG:-latest}
+    container_name: arbex-subscription
+    build:
+      context: ./subscription-service
+      dockerfile: Dockerfile
+    ports:
+      - "50056:50056"
+    env_file:
+      - ./subscription-service/.env
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  payment-service:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/payment-service:${TAG:-latest}
+    container_name: arbex-payment
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "50057:50057"
+      - "3001:3001"
+    env_file:
+      - ./payment-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+  graphql-gateway:
+    image: ${CI_REGISTRY_IMAGE:-registry.gitlab.com/your-group/microservices-arbex}/graphql-gateway:${TAG:-latest}
+    container_name: arbex-gateway
+    build:
+      context: ./graphql-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./graphql-gateway/.env
+    volumes:
+      - ./keys:/app/keys:ro
+    depends_on:
+      - auth-service
+      - user-service
+      - admin-service
+      - subscription-service
+    restart: unless-stopped
+    networks:
+      - arbex-net
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+
+networks:
+  arbex-net:
+    driver: bridge

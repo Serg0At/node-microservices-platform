@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "userpb";
+option java_multiple_files = true;
+
+/* =============================
+   USER SERVICE RPC DEFINITIONS
+   ============================= */
+
+service UserService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse);
+}
+
+/* =============================
+         USER PROFILE
+   ============================= */
+
+message UserProfile {
+  string user_id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+}
+
+/* ---- GetProfile ---- */
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfileResponse {
+  bool success = 1;
+  UserProfile profile = 2;
+}
+
+/* ---- UpdateProfile ---- */
+
+message UpdateProfileRequest {
+  string access_token = 1;
+  string username = 2;
+  string display_name = 3;
+}
+
+message UpdateProfileResponse {
+  bool success = 1;
+  string message = 2;
+  UserProfile profile = 3;
+}
+
+/* ---- UploadAvatar ---- */
+
+message UploadAvatarRequest {
+  string access_token = 1;
+  bytes image_data = 2;
+  string content_type = 3;
+  string file_name = 4;
+}
+
+message UploadAvatarResponse {
+  bool success = 1;
+  string message = 2;
+  string avatar_url = 3;
+  UserProfile profile = 4;
+}

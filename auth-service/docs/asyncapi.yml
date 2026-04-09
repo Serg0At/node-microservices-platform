@@ -1,0 +1,717 @@
+asyncapi: 2.6.0
+
+info:
+  title: Auth Service
+  version: 1.0.0
+  description: |
+    Authentication and authorization microservice for the Arbex platform.
+    Handles registration, login, 2FA, OAuth, password management, and email verification.
+    Publishes user lifecycle events to RabbitMQ and exposes a gRPC API on port 50051.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50051
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Published Events (auth-events exchange) ───────────────
+
+  user.registered:
+    description: Emitted when a new user registers or signs up via OIDC for the first time
+    publish:
+      operationId: publishUserRegistered
+      summary: User registered
+      tags:
+        - name: auth
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/UserRegistered'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.logged_in:
+    description: Emitted on every successful login (password or OIDC returning user)
+    publish:
+      operationId: publishUserLoggedIn
+      summary: User logged in
+      tags:
+        - name: auth
+      message:
+        $ref: '#/components/messages/UserLoggedIn'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.forgot_password:
+    description: Emitted when a user requests a password reset code
+    publish:
+      operationId: publishUserForgotPassword
+      summary: Password reset requested
+      tags:
+        - name: auth
+        - name: password
+      message:
+        $ref: '#/components/messages/UserForgotPassword'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.change_password_request:
+    description: Emitted when an authenticated user requests a password change (sends email with token)
+    publish:
+      operationId: publishUserChangePasswordRequest
+      summary: Password change requested
+      tags:
+        - name: auth
+        - name: password
+      message:
+        $ref: '#/components/messages/UserChangePasswordRequest'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.password_changed:
+    description: Emitted when a password is successfully reset or changed
+    publish:
+      operationId: publishUserPasswordChanged
+      summary: Password changed
+      tags:
+        - name: auth
+        - name: password
+      message:
+        $ref: '#/components/messages/UserPasswordChanged'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.2fa_enabled:
+    description: Emitted when a user enables 2FA for the first time
+    publish:
+      operationId: publishUser2faEnabled
+      summary: 2FA enabled
+      tags:
+        - name: auth
+        - name: security
+      message:
+        $ref: '#/components/messages/User2faEnabled'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/RegisterUser:
+    description: Create a new user account with email, username, and password
+    publish:
+      operationId: grpcRegisterUser
+      summary: Register user
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/RegisterUserRequest'
+    subscribe:
+      operationId: grpcRegisterUserResponse
+      message:
+        $ref: '#/components/messages/RegisterUserResponse'
+
+  grpc/LoginUser:
+    description: Authenticate with email/username and password. Returns requires_2fa if 2FA is enabled. Rejects banned users.
+    publish:
+      operationId: grpcLoginUser
+      summary: Login user
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/LoginUserRequest'
+    subscribe:
+      operationId: grpcLoginUserResponse
+      message:
+        $ref: '#/components/messages/LoginUserResponse'
+
+  grpc/OIDCLogin:
+    description: Google OAuth login via authorization code exchange
+    publish:
+      operationId: grpcOIDCLogin
+      summary: OIDC login
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/OIDCLoginRequest'
+    subscribe:
+      operationId: grpcOIDCLoginResponse
+      message:
+        $ref: '#/components/messages/OIDCLoginResponse'
+
+  grpc/ForgotPassword:
+    description: Initiate password reset — sends 6-digit code to email
+    publish:
+      operationId: grpcForgotPassword
+      summary: Forgot password
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/ForgotPasswordRequest'
+    subscribe:
+      operationId: grpcForgotPasswordResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/VerifyResetCode:
+    description: Validate a password reset code without consuming it
+    publish:
+      operationId: grpcVerifyResetCode
+      summary: Verify reset code
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/VerifyResetCodeRequest'
+    subscribe:
+      operationId: grpcVerifyResetCodeResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/ResetPassword:
+    description: Reset password using email + code (unauthenticated)
+    publish:
+      operationId: grpcResetPassword
+      summary: Reset password
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/ResetPasswordRequest'
+    subscribe:
+      operationId: grpcResetPasswordResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/RequestPasswordChange:
+    description: Authenticated user requests a password change — sends token to email
+    publish:
+      operationId: grpcRequestPasswordChange
+      summary: Request password change
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/AccessTokenRequest'
+    subscribe:
+      operationId: grpcRequestPasswordChangeResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/ConfirmPasswordChange:
+    description: Confirm password change using token from email
+    publish:
+      operationId: grpcConfirmPasswordChange
+      summary: Confirm password change
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/ConfirmPasswordChangeRequest'
+    subscribe:
+      operationId: grpcConfirmPasswordChangeResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/Setup2FA:
+    description: Generate TOTP QR code, secret, and backup codes
+    publish:
+      operationId: grpcSetup2FA
+      summary: Setup 2FA
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/AccessTokenRequest'
+    subscribe:
+      operationId: grpcSetup2FAResponse
+      message:
+        $ref: '#/components/messages/Setup2FAResponse'
+
+  grpc/Verify2FA:
+    description: Validate TOTP code — returns tokens with acr=2fa claim on first activation
+    publish:
+      operationId: grpcVerify2FA
+      summary: Verify 2FA
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/Verify2FARequest'
+    subscribe:
+      operationId: grpcVerify2FAResponse
+      message:
+        $ref: '#/components/messages/Verify2FAResponse'
+
+  grpc/VerifyEmail:
+    description: Confirm email address via magic link token
+    publish:
+      operationId: grpcVerifyEmail
+      summary: Verify email
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/TokenRequest'
+    subscribe:
+      operationId: grpcVerifyEmailResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+  grpc/RefreshTokens:
+    description: Rotate access and refresh tokens. Rejects banned users.
+    publish:
+      operationId: grpcRefreshTokens
+      summary: Refresh tokens
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/RefreshTokenRequest'
+    subscribe:
+      operationId: grpcRefreshTokensResponse
+      message:
+        $ref: '#/components/messages/RefreshTokensResponse'
+
+  grpc/Logout:
+    description: Revoke refresh token and end session
+    publish:
+      operationId: grpcLogout
+      summary: Logout
+      tags:
+        - name: grpc
+      message:
+        $ref: '#/components/messages/RefreshTokenRequest'
+    subscribe:
+      operationId: grpcLogoutResponse
+      message:
+        $ref: '#/components/messages/MessageResponse'
+
+components:
+  messages:
+    # ─────── RabbitMQ Event Messages ───────
+
+    UserRegistered:
+      name: UserRegistered
+      title: User Registered Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, username, ts]
+        properties:
+          user_id:
+            type: integer
+            description: Unique user ID
+          email:
+            type: string
+            format: email
+          username:
+            type: string
+          verification_token:
+            type: string
+            description: Email verification token (present in registration flow)
+          trial_signals:
+            type: object
+            description: Signals for free trial eligibility (present in registration flow)
+            properties:
+              fingerprint_seen:
+                type: boolean
+              ip_seen:
+                type: boolean
+              disposable_email:
+                type: boolean
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    UserLoggedIn:
+      name: UserLoggedIn
+      title: User Logged In Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, device, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          device:
+            type: string
+            description: User-Agent string
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    UserForgotPassword:
+      name: UserForgotPassword
+      title: Forgot Password Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, code, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          code:
+            type: string
+            description: 6-digit reset code
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    UserChangePasswordRequest:
+      name: UserChangePasswordRequest
+      title: Password Change Requested Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, token, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          token:
+            type: string
+            description: 32-byte hex token for email confirmation link
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    UserPasswordChanged:
+      name: UserPasswordChanged
+      title: Password Changed Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    User2faEnabled:
+      name: User2faEnabled
+      title: 2FA Enabled Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, email, ts]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          ts:
+            type: integer
+            description: Unix timestamp in seconds
+
+    # ─────── gRPC Request/Response Messages ───────
+
+    RegisterUserRequest:
+      name: RegisterUserRequest
+      payload:
+        type: object
+        required: [email, username, password_hash]
+        properties:
+          email:
+            type: string
+            format: email
+          username:
+            type: string
+          password_hash:
+            type: string
+          fingerprint:
+            type: string
+          ip:
+            type: string
+
+    RegisterUserResponse:
+      name: RegisterUserResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          user:
+            $ref: '#/components/schemas/User'
+          tokens:
+            $ref: '#/components/schemas/Tokens'
+
+    LoginUserRequest:
+      name: LoginUserRequest
+      payload:
+        type: object
+        required: [email_username, password_hash]
+        properties:
+          email_username:
+            type: string
+            description: Email or username
+          password_hash:
+            type: string
+
+    LoginUserResponse:
+      name: LoginUserResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          user:
+            $ref: '#/components/schemas/User'
+          tokens:
+            $ref: '#/components/schemas/Tokens'
+          requires_2fa:
+            type: boolean
+            description: True if 2FA is enabled and TOTP code is required
+
+    OIDCLoginRequest:
+      name: OIDCLoginRequest
+      payload:
+        type: object
+        required: [code, provider, state]
+        properties:
+          code:
+            type: string
+            description: OAuth authorization code
+          provider:
+            type: string
+            description: OAuth provider (e.g. "google")
+          state:
+            type: string
+            description: CSRF state token
+
+    OIDCLoginResponse:
+      name: OIDCLoginResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          user:
+            $ref: '#/components/schemas/User'
+          id_token:
+            type: string
+          tokens:
+            $ref: '#/components/schemas/Tokens'
+
+    ForgotPasswordRequest:
+      name: ForgotPasswordRequest
+      payload:
+        type: object
+        required: [email]
+        properties:
+          email:
+            type: string
+            format: email
+
+    VerifyResetCodeRequest:
+      name: VerifyResetCodeRequest
+      payload:
+        type: object
+        required: [email, code]
+        properties:
+          email:
+            type: string
+            format: email
+          code:
+            type: string
+
+    ResetPasswordRequest:
+      name: ResetPasswordRequest
+      payload:
+        type: object
+        required: [email, code, new_pass]
+        properties:
+          email:
+            type: string
+            format: email
+          code:
+            type: string
+          new_pass:
+            type: string
+
+    ConfirmPasswordChangeRequest:
+      name: ConfirmPasswordChangeRequest
+      payload:
+        type: object
+        required: [token, new_pass]
+        properties:
+          token:
+            type: string
+          new_pass:
+            type: string
+
+    AccessTokenRequest:
+      name: AccessTokenRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    TokenRequest:
+      name: TokenRequest
+      payload:
+        type: object
+        required: [token]
+        properties:
+          token:
+            type: string
+
+    RefreshTokenRequest:
+      name: RefreshTokenRequest
+      payload:
+        type: object
+        required: [refresh_token]
+        properties:
+          refresh_token:
+            type: string
+
+    MessageResponse:
+      name: MessageResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    Setup2FAResponse:
+      name: Setup2FAResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          qr_code:
+            type: string
+            description: Base64-encoded QR code image
+          secret:
+            type: string
+            description: TOTP secret key
+          backup_codes:
+            type: array
+            items:
+              type: string
+
+    Verify2FARequest:
+      name: Verify2FARequest
+      payload:
+        type: object
+        required: [code, access_token]
+        properties:
+          code:
+            type: string
+            description: 6-digit TOTP code
+          access_token:
+            type: string
+
+    Verify2FAResponse:
+      name: Verify2FAResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          access_token:
+            type: string
+          refresh_token:
+            type: string
+
+    RefreshTokensResponse:
+      name: RefreshTokensResponse
+      payload:
+        type: object
+        properties:
+          access_token:
+            type: string
+          refresh_token:
+            type: string
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        external_id:
+          type: string
+        provider:
+          type: string
+        subscription:
+          $ref: '#/components/schemas/SubscriptionInfo'
+
+    Tokens:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+
+    SubscriptionInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        expires_at:
+          type: integer

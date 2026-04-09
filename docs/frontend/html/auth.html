@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auth Service — Frontend Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--bg-sidebar:#090d13;--bg-card:#161b22;--bg-code:#1a2030;--bg-hover:#1f2937;--border:#21282f;--accent:#e10098;--accent-dim:rgba(225,0,152,.12);--blue:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#f0883e;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#6e7681;--sidebar-w:260px;--radius:8px}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex;min-height:100vh;font-size:14px}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#484f58}
+    .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;z-index:100}
+    .sidebar-header{padding:24px 20px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .svc-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.3px}
+    .sidebar-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}
+    .sidebar-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .sidebar-nav{padding:12px 0;flex:1}
+    .nav-group-label{padding:8px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim)}
+    .nav-link{display:flex;align-items:center;gap:8px;padding:6px 20px;color:var(--text-muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav-link:hover{color:var(--text);background:var(--bg-hover);border-left-color:var(--border)}
+    .nav-link.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500}
+    .nav-link .dot{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0}
+    .nav-link.active .dot{background:var(--accent)}
+    .nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;flex-shrink:0}
+    .badge-auth{background:rgba(225,0,152,.2);color:#e10098}
+    .badge-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .main{margin-left:var(--sidebar-w);flex:1;padding:48px 64px;max-width:960px}
+    .page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+    .page-title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:12px}
+    .page-title span{color:var(--accent)}
+    .page-desc{font-size:15px;color:var(--text-muted);max-width:640px;line-height:1.7}
+    .note{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text-muted);margin-bottom:36px}
+    .rpc{margin-bottom:52px;scroll-margin-top:24px}
+    .rpc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+    .rpc-name{font-size:18px;font-weight:600;color:var(--text)}
+    .label{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+    .label-auth{background:rgba(225,0,152,.15);color:#e10098}
+    .label-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .rpc-desc{font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+    .rpc-desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    .table-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:6px}
+    .table-wrap{overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    thead tr{background:var(--bg-card)}
+    th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    td code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    tbody tr:hover{background:rgba(255,255,255,.02)}
+    .req-yes{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(63,185,80,.15);color:#3fb950}
+    .req-no{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(139,148,158,.1);color:var(--text-dim)}
+    .code-block{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:0}
+    .code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e2530;border-bottom:1px solid var(--border)}
+    .code-lang{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .copy-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+    .copy-btn:hover{color:var(--text);border-color:#484f58;background:var(--bg-hover)}
+    .copy-btn.copied{color:#3fb950;border-color:#3fb950}
+    .code-block pre{margin:0;padding:0;background:var(--bg-code)!important;border-radius:0}
+    .code-block pre code{font-family:'JetBrains Mono',monospace!important;font-size:12.5px!important;line-height:1.65!important;padding:16px!important;display:block;background:var(--bg-code)!important;overflow-x:auto}
+    .divider{border:none;border-top:1px solid var(--border);margin:40px 0}
+    .scroll-top{position:fixed;bottom:24px;right:24px;width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:16px;opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+    .scroll-top.visible{opacity:1;pointer-events:all}
+    .scroll-top:hover{color:var(--text);border-color:#484f58}
+    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.main{margin-left:0;padding:24px 20px}}
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="svc-icon">AUTH</div>
+      <div>
+        <div class="sidebar-title">Auth Service</div>
+        <div class="sidebar-sub">Frontend Reference</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">RPCs</div>
+    <a href="#register-user"           class="nav-link active"><span class="dot"></span>RegisterUser <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#login-user"              class="nav-link"><span class="dot"></span>LoginUser <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#oidc-login"              class="nav-link"><span class="dot"></span>OIDCLogin <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#forgot-password"         class="nav-link"><span class="dot"></span>ForgotPassword <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#verify-reset-code"       class="nav-link"><span class="dot"></span>VerifyResetCode <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#reset-password"          class="nav-link"><span class="dot"></span>ResetPassword <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#request-password-change" class="nav-link"><span class="dot"></span>RequestPasswordChange <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#confirm-password-change" class="nav-link"><span class="dot"></span>ConfirmPasswordChange <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#setup-2fa"               class="nav-link"><span class="dot"></span>Setup2FA <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#verify-2fa"              class="nav-link"><span class="dot"></span>Verify2FA <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#verify-email"            class="nav-link"><span class="dot"></span>VerifyEmail <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#refresh-tokens"          class="nav-link"><span class="dot"></span>RefreshTokens <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#logout"                  class="nav-link"><span class="dot"></span>Logout <span class="nav-badge badge-auth">@auth</span></a>
+  </nav>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1 class="page-title">Auth Service <span>API Reference</span></h1>
+    <p class="page-desc">Handles all authentication and identity operations including registration, login, OAuth, password management, two-factor authentication, and session lifecycle. Issues RS256 JWT access tokens and opaque refresh tokens.</p>
+  </div>
+
+  <div class="note">All RPCs are exposed through the GraphQL gateway — you never call gRPC directly. Field names below match what the gateway forwards.</div>
+
+  <!-- RegisterUser -->
+  <section class="rpc" id="register-user">
+    <div class="rpc-header"><span class="rpc-name">RegisterUser</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Registers a new user account, stores a verification token in Redis, publishes a <code>user.registered</code> event, and returns tokens for an immediate session.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>email</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>User email address (disposable domains are blocked)</td></tr>
+      <tr><td><code>username</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Unique username (case-insensitive)</td></tr>
+      <tr><td><code>password_hash</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Pre-hashed password from client</td></tr>
+      <tr><td><code>fingerprint</code></td><td>string</td><td><span class="req-no">no</span></td><td>FingerprintJS visitorId for trial abuse detection</td></tr>
+      <tr><td><code>ip</code></td><td>string</td><td><span class="req-no">no</span></td><td>Client IP forwarded by gateway</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td>true on success</td></tr>
+      <tr><td><code>user.id</code></td><td>string</td><td>Created user ID</td></tr>
+      <tr><td><code>user.email</code></td><td>string</td><td></td></tr>
+      <tr><td><code>user.username</code></td><td>string</td><td></td></tr>
+      <tr><td><code>tokens.access_token</code></td><td>string</td><td>JWT (1h)</td></tr>
+      <tr><td><code>tokens.refresh_token</code></td><td>string</td><td>Opaque token (30d)</td></tr>
+      <tr><td><code>tokens.token_type</code></td><td>string</td><td>"Bearer"</td></tr>
+      <tr><td><code>tokens.expires_in</code></td><td>int</td><td>3600</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">// Request
+{
+  "email": "john@example.com",
+  "username": "john_doe",
+  "password_hash": "hashed_password",
+  "fingerprint": "abc123visitorId"
+}
+
+// Response
+{
+  "success": true,
+  "user": { "id": "42", "email": "john@example.com", "username": "john_doe" },
+  "tokens": { "access_token": "eyJ...", "refresh_token": "a1b2c3...", "token_type": "Bearer", "expires_in": 3600 }
+}</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- LoginUser -->
+  <section class="rpc" id="login-user">
+    <div class="rpc-header"><span class="rpc-name">LoginUser</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Authenticates a user by email/username and password; returns tokens or signals that 2FA verification is required.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>email_username</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Email or username</td></tr>
+      <tr><td><code>password_hash</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Pre-hashed password</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>user</code></td><td>User</td><td>Present only when <code>requires_2fa</code> is false</td></tr>
+      <tr><td><code>tokens</code></td><td>Tokens</td><td>Present only when <code>requires_2fa</code> is false</td></tr>
+      <tr><td><code>requires_2fa</code></td><td>bool</td><td>true → redirect to 2FA input; use returned short-lived <code>access_token</code> for Verify2FA</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">// Request
+{ "email_username": "john@example.com", "password_hash": "hashed_password" }
+
+// Response (no 2FA)
+{ "success": true, "requires_2fa": false, "user": { "id": "42" }, "tokens": { "access_token": "eyJ..." } }
+
+// Response (2FA required)
+{ "success": true, "requires_2fa": true, "tokens": { "access_token": "eyJ_short_lived...", "expires_in": 300 } }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- OIDCLogin -->
+  <section class="rpc" id="oidc-login">
+    <div class="rpc-header"><span class="rpc-name">OIDCLogin</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Exchanges a provider authorization code for user info, creates or links the account, and returns tokens.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>code</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Authorization code from OAuth provider</td></tr>
+      <tr><td><code>provider</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>"google"</td></tr>
+      <tr><td><code>state</code></td><td>string</td><td><span class="req-no">no</span></td><td>CSRF state value</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>user</code></td><td>User</td><td>Includes <code>external_id</code> and <code>provider</code></td></tr>
+      <tr><td><code>id_token</code></td><td>string</td><td>Raw Google ID token</td></tr>
+      <tr><td><code>tokens</code></td><td>Tokens</td><td>Access + refresh tokens</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">// Request
+{ "code": "4/0AY0e-g7...", "provider": "google", "state": "xyz" }
+
+// Response
+{
+  "success": true,
+  "user": { "id": "42", "email": "john@gmail.com", "external_id": "google_108...", "provider": "google" },
+  "id_token": "eyJ...",
+  "tokens": { "access_token": "eyJ...", "refresh_token": "a1b2c3...", "token_type": "Bearer", "expires_in": 3600 }
+}</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ForgotPassword -->
+  <section class="rpc" id="forgot-password">
+    <div class="rpc-header"><span class="rpc-name">ForgotPassword</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Sends a password reset code to the user's email; always returns success to prevent email enumeration.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>email</code></td><td>string</td><td><span class="req-yes">yes</span></td><td></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td>Always true</td></tr>
+      <tr><td><code>message</code></td><td>string</td><td>"If that email exists, a reset code was sent"</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">// Request
+{ "email": "john@example.com" }
+
+// Response
+{ "success": true, "message": "If that email exists, a reset code was sent" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- VerifyResetCode -->
+  <section class="rpc" id="verify-reset-code">
+    <div class="rpc-header"><span class="rpc-name">VerifyResetCode</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Validates a reset code without consuming it — use this to enable the "set new password" step in the UI before calling ResetPassword.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>email</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>code</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td>true if code is valid</td></tr>
+      <tr><td><code>message</code></td><td>string</td><td></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "email": "john@example.com", "code": "483921" }
+// Response
+{ "success": true, "message": "Code is valid" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ResetPassword -->
+  <section class="rpc" id="reset-password">
+    <div class="rpc-header"><span class="rpc-name">ResetPassword</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Resets the user's password using the verified code; consumes and deletes the code.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>email</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>code</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>new_pass</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td></tr>
+      <tr><td><code>message</code></td><td>string</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "email": "john@example.com", "code": "483921", "new_pass": "hashed_new_password" }
+// Response
+{ "success": true, "message": "Password reset successfully" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- RequestPasswordChange -->
+  <section class="rpc" id="request-password-change">
+    <div class="rpc-header"><span class="rpc-name">RequestPasswordChange</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Sends a password-change confirmation link to the authenticated user's email.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Valid JWT of the authenticated user</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td></tr>
+      <tr><td><code>message</code></td><td>string</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "access_token": "eyJ..." }
+// Response
+{ "success": true, "message": "Password change email sent" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ConfirmPasswordChange -->
+  <section class="rpc" id="confirm-password-change">
+    <div class="rpc-header"><span class="rpc-name">ConfirmPasswordChange</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Sets a new password using the token received in the email link (unauthenticated at this point).</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Token from the email link</td></tr>
+      <tr><td><code>new_pass</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>New pre-hashed password</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td></tr><tr><td><code>message</code></td><td>string</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "token": "c3d4e5f6...", "new_pass": "hashed_new_password" }
+// Response
+{ "success": true, "message": "Password changed successfully" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Setup2FA -->
+  <section class="rpc" id="setup-2fa">
+    <div class="rpc-header"><span class="rpc-name">Setup2FA</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Generates a TOTP secret, returns a QR code and backup codes; 2FA is not active until <code>Verify2FA</code> is called once successfully.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Valid JWT of the authenticated user</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>qr_code</code></td><td>string</td><td>Base64 PNG — render as <code>&lt;img src="..."&gt;</code></td></tr>
+      <tr><td><code>secret</code></td><td>string</td><td>Raw TOTP secret (show to user for manual entry)</td></tr>
+      <tr><td><code>backup_codes</code></td><td>string[]</td><td>8 one-time codes — show once, cannot be recovered</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "access_token": "eyJ..." }
+// Response
+{
+  "success": true,
+  "qr_code": "data:image/png;base64,iVBOR...",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "backup_codes": ["a1b2c3d4", "e5f6g7h8", "..."]
+}</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Verify2FA -->
+  <section class="rpc" id="verify-2fa">
+    <div class="rpc-header"><span class="rpc-name">Verify2FA</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Verifies a TOTP code or backup code; on first use activates 2FA, on login completes the session and returns full tokens with <code>acr: "2fa"</code>.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>code</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>6-digit TOTP or 8-char backup code</td></tr>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Short-lived token from login's <code>requires_2fa</code> response</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>message</code></td><td>string</td><td></td></tr>
+      <tr><td><code>access_token</code></td><td>string</td><td>Full JWT with <code>acr: "2fa"</code> claim (1h)</td></tr>
+      <tr><td><code>refresh_token</code></td><td>string</td><td>Opaque token (30d)</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "code": "482910", "access_token": "eyJ_short_lived..." }
+// Response
+{ "success": true, "message": "2FA verified", "access_token": "eyJ_full...", "refresh_token": "x9y8z7..." }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- VerifyEmail -->
+  <section class="rpc" id="verify-email">
+    <div class="rpc-header"><span class="rpc-name">VerifyEmail</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Marks the user's email as verified using the token sent during registration.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Token from the verification email link</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td></tr><tr><td><code>message</code></td><td>string</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "token": "f1e2d3c4b5a6..." }
+// Response
+{ "success": true, "message": "Email verified successfully" }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- RefreshTokens -->
+  <section class="rpc" id="refresh-tokens">
+    <div class="rpc-header"><span class="rpc-name">RefreshTokens</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Rotates both tokens — old refresh token is invalidated immediately, new pair is returned.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>refresh_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td>New JWT (1h)</td></tr>
+      <tr><td><code>refresh_token</code></td><td>string</td><td>New opaque token (30d)</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "refresh_token": "a1b2c3..." }
+// Response
+{ "access_token": "eyJ_new...", "refresh_token": "d4e5f6_new..." }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Logout -->
+  <section class="rpc" id="logout">
+    <div class="rpc-header"><span class="rpc-name">Logout</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Revokes the refresh token and removes the session; access token expires naturally after its 1h TTL.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>refresh_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td></tr><tr><td><code>message</code></td><td>string</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "refresh_token": "a1b2c3..." }
+// Response
+{ "success": true, "message": "Logged out successfully" }</code></pre></div>
+  </section>
+
+</main>
+
+<div class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+<script>
+  hljs.highlightAll();
+  function copyCode(btn){const c=btn.closest('.code-block').querySelector('code');navigator.clipboard.writeText(c.innerText).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}
+  const obs=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting){document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${en.target.id}"]`);if(a){a.classList.add('active');a.scrollIntoView({block:'nearest'})}}})},{rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('[id]').forEach(s=>obs.observe(s));
+  const st=document.getElementById('scrollTop');window.addEventListener('scroll',()=>st.classList.toggle('visible',scrollY>400));
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+syntax = "proto3";
+package payment;
+
+service PaymentService {
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc GetTransaction(GetTransactionRequest) returns (TransactionResponse);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+}
+
+message CreatePaymentRequest {
+  string user_id = 1;
+  int32 plan_type = 2;
+  string payment_method = 3;
+  string currency = 4;
+  int32 amount = 5;
+  string order_id = 7;
+  int32 duration_months = 6;
+}
+
+message CreatePaymentResponse {
+  bool success = 1;
+  string payment_url = 2;
+  string order_id = 3;
+  int32 expires_in = 4;
+}
+
+message GetTransactionRequest {
+  string access_token = 1;
+  string id = 2;
+}
+
+message TransactionResponse {
+  bool success = 1;
+  Transaction transaction = 2;
+}
+
+message Transaction {
+  string id = 1;
+  string user_id = 2;
+  string provider = 3;
+  string provider_order_id = 4;
+  int32 amount = 5;
+  string currency = 6;
+  string status = 7;
+  int32 plan_type = 8;
+  int32 duration_months = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message ListTransactionsRequest {
+  string access_token = 1;
+  string user_id = 2;
+  string status = 3;
+  int32 page = 4;
+  int32 limit = 5;
+}
+
+message ListTransactionsResponse {
+  bool success = 1;
+  repeated Transaction transactions = 2;
+  int32 total = 3;
+}

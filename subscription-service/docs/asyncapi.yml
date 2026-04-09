@@ -1,0 +1,873 @@
+asyncapi: 2.6.0
+
+info:
+  title: Subscription Service
+  version: 1.0.0
+  description: |
+    Subscription management microservice for the Arbex platform.
+    Handles subscription lifecycle (create, cancel, restore), checkout with proration,
+    promo codes, and free trial eligibility. Consumes auth and payment events via RabbitMQ,
+    publishes subscription lifecycle events, and exposes a gRPC API on port 50056.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50056
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Consumed Events ───────────────
+
+  user.registered:
+    description: New user registered — creates free trial subscription if eligible
+    subscribe:
+      operationId: consumeUserRegistered
+      summary: Handle user registration (trial check)
+      tags:
+        - name: consumed
+        - name: trial
+      message:
+        $ref: '#/components/messages/UserRegisteredEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+        queue:
+          name: subscription-service.auth.queue
+          durable: true
+
+  payment.succeeded:
+    description: Payment confirmed — activates or upgrades the user's subscription
+    subscribe:
+      operationId: consumePaymentSucceeded
+      summary: Handle payment success
+      tags:
+        - name: consumed
+        - name: payment
+      message:
+        $ref: '#/components/messages/PaymentSucceededEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: payment-events
+          type: topic
+          durable: true
+        queue:
+          name: subscription-service.payment.queue
+          durable: true
+
+  payment.refunded:
+    description: Payment refunded — terminates the user's subscription
+    subscribe:
+      operationId: consumePaymentRefunded
+      summary: Handle payment refund
+      tags:
+        - name: consumed
+        - name: payment
+      message:
+        $ref: '#/components/messages/PaymentRefundedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: payment-events
+          type: topic
+          durable: true
+
+  # ─────────────── Published Events (subscription-events exchange) ───────────────
+
+  subscription.activated:
+    description: Emitted when a subscription is activated (after payment or admin set)
+    publish:
+      operationId: publishSubscriptionActivated
+      summary: Subscription activated
+      tags:
+        - name: published
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/SubscriptionActivatedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: subscription-events
+          type: topic
+          durable: true
+
+  subscription.cancelled:
+    description: Emitted when a user cancels their subscription (enters grace period)
+    publish:
+      operationId: publishSubscriptionCancelled
+      summary: Subscription cancelled
+      tags:
+        - name: published
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/SubscriptionCancelledEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: subscription-events
+          type: topic
+          durable: true
+
+  subscription.expired:
+    description: Emitted when a subscription expires naturally
+    publish:
+      operationId: publishSubscriptionExpired
+      summary: Subscription expired
+      tags:
+        - name: published
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/SubscriptionExpiredEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: subscription-events
+          type: topic
+          durable: true
+
+  subscription.terminated:
+    description: Emitted when a subscription is terminated (refund or admin removal)
+    publish:
+      operationId: publishSubscriptionTerminated
+      summary: Subscription terminated
+      tags:
+        - name: published
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/SubscriptionTerminatedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: subscription-events
+          type: topic
+          durable: true
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/GetSubscription:
+    description: Get the current user's active subscription
+    publish:
+      operationId: grpcGetSubscription
+      summary: Get subscription
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/GetSubscriptionRequest'
+    subscribe:
+      operationId: grpcGetSubscriptionResponse
+      message:
+        $ref: '#/components/messages/SubscriptionResponse'
+
+  grpc/CheckAccess:
+    description: Check if a user has access at a required subscription level (internal)
+    publish:
+      operationId: grpcCheckAccess
+      summary: Check access
+      tags:
+        - name: grpc
+        - name: internal
+      message:
+        $ref: '#/components/messages/CheckAccessRequest'
+    subscribe:
+      operationId: grpcCheckAccessResponse
+      message:
+        $ref: '#/components/messages/CheckAccessResponse'
+
+  grpc/CreateCheckout:
+    description: Create a checkout session — calculates proration, applies promo code, delegates to payment-service
+    publish:
+      operationId: grpcCreateCheckout
+      summary: Create checkout
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/CreateCheckoutRequest'
+    subscribe:
+      operationId: grpcCreateCheckoutResponse
+      message:
+        $ref: '#/components/messages/CreateCheckoutResponse'
+
+  grpc/CancelSubscription:
+    description: Cancel the current user's subscription (enters grace period)
+    publish:
+      operationId: grpcCancelSubscription
+      summary: Cancel subscription
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/CancelSubscriptionRequest'
+    subscribe:
+      operationId: grpcCancelSubscriptionResponse
+      message:
+        $ref: '#/components/messages/SubscriptionResponse'
+
+  grpc/RestoreSubscription:
+    description: Restore a cancelled subscription during grace period
+    publish:
+      operationId: grpcRestoreSubscription
+      summary: Restore subscription
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/RestoreSubscriptionRequest'
+    subscribe:
+      operationId: grpcRestoreSubscriptionResponse
+      message:
+        $ref: '#/components/messages/SubscriptionResponse'
+
+  grpc/AdminSetSubscription:
+    description: Admin — manually set a user's subscription type and duration
+    publish:
+      operationId: grpcAdminSetSubscription
+      summary: Admin set subscription
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/AdminSetSubscriptionRequest'
+    subscribe:
+      operationId: grpcAdminSetSubscriptionResponse
+      message:
+        $ref: '#/components/messages/SubscriptionResponse'
+
+  grpc/AdminRemoveSubscription:
+    description: Admin — terminate a user's subscription
+    publish:
+      operationId: grpcAdminRemoveSubscription
+      summary: Admin remove subscription
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/AdminRemoveSubscriptionRequest'
+    subscribe:
+      operationId: grpcAdminRemoveSubscriptionResponse
+      message:
+        $ref: '#/components/messages/AdminRemoveSubscriptionResponse'
+
+  grpc/GetSubscriptionStats:
+    description: Admin — aggregate subscription stats by status and tier
+    publish:
+      operationId: grpcGetSubscriptionStats
+      summary: Get subscription stats
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/GetSubscriptionStatsRequest'
+    subscribe:
+      operationId: grpcGetSubscriptionStatsResponse
+      message:
+        $ref: '#/components/messages/SubscriptionStatsResponse'
+
+  grpc/CreatePromoCode:
+    description: Admin — create a new promo code with discount, limits, and tier restrictions
+    publish:
+      operationId: grpcCreatePromoCode
+      summary: Create promo code
+      tags:
+        - name: grpc
+        - name: admin
+        - name: promo
+      message:
+        $ref: '#/components/messages/CreatePromoCodeRequest'
+    subscribe:
+      operationId: grpcCreatePromoCodeResponse
+      message:
+        $ref: '#/components/messages/PromoCodeResponse'
+
+  grpc/ListPromoCodes:
+    description: Admin — paginated list of promo codes with optional active filter
+    publish:
+      operationId: grpcListPromoCodes
+      summary: List promo codes
+      tags:
+        - name: grpc
+        - name: admin
+        - name: promo
+      message:
+        $ref: '#/components/messages/ListPromoCodesRequest'
+    subscribe:
+      operationId: grpcListPromoCodesResponse
+      message:
+        $ref: '#/components/messages/ListPromoCodesResponse'
+
+  grpc/DeactivatePromoCode:
+    description: Admin — deactivate a promo code by code string
+    publish:
+      operationId: grpcDeactivatePromoCode
+      summary: Deactivate promo code
+      tags:
+        - name: grpc
+        - name: admin
+        - name: promo
+      message:
+        $ref: '#/components/messages/DeactivatePromoCodeRequest'
+    subscribe:
+      operationId: grpcDeactivatePromoCodeResponse
+      message:
+        $ref: '#/components/messages/DeactivatePromoCodeResponse'
+
+  grpc/ValidatePromoCode:
+    description: Validate a promo code for a specific plan and duration — returns calculated discount
+    publish:
+      operationId: grpcValidatePromoCode
+      summary: Validate promo code
+      tags:
+        - name: grpc
+        - name: user
+        - name: promo
+      message:
+        $ref: '#/components/messages/ValidatePromoCodeRequest'
+    subscribe:
+      operationId: grpcValidatePromoCodeResponse
+      message:
+        $ref: '#/components/messages/ValidatePromoCodeResponse'
+
+components:
+  messages:
+    # ─────── Consumed RabbitMQ Events ───────
+
+    UserRegisteredEvent:
+      name: UserRegisteredEvent
+      title: User Registered
+      description: Triggers free trial eligibility check via trial_signals
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          username:
+            type: string
+          trial_signals:
+            type: object
+            description: Signals for free trial eligibility
+            properties:
+              fingerprint_seen:
+                type: boolean
+              ip_seen:
+                type: boolean
+              disposable_email:
+                type: boolean
+
+    PaymentSucceededEvent:
+      name: PaymentSucceededEvent
+      title: Payment Succeeded
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, plan_type, duration_months]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          amount:
+            type: integer
+          currency:
+            type: string
+          provider:
+            type: string
+          transaction_id:
+            type: string
+          order_id:
+            type: string
+          duration_months:
+            type: integer
+
+    PaymentRefundedEvent:
+      name: PaymentRefundedEvent
+      title: Payment Refunded
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id]
+        properties:
+          user_id:
+            type: string
+          plan_type:
+            type: integer
+          amount:
+            type: integer
+          provider:
+            type: string
+          transaction_id:
+            type: string
+
+    # ─────── Published RabbitMQ Events ───────
+
+    SubscriptionActivatedEvent:
+      name: SubscriptionActivatedEvent
+      title: Subscription Activated
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, sub_type, status]
+        properties:
+          user_id:
+            type: string
+          sub_type:
+            type: integer
+          status:
+            type: string
+          started_at:
+            type: string
+            format: date-time
+          ended_at:
+            type: string
+            format: date-time
+
+    SubscriptionCancelledEvent:
+      name: SubscriptionCancelledEvent
+      title: Subscription Cancelled
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, sub_type]
+        properties:
+          user_id:
+            type: string
+          sub_type:
+            type: integer
+          grace_period_end:
+            type: string
+            format: date-time
+
+    SubscriptionExpiredEvent:
+      name: SubscriptionExpiredEvent
+      title: Subscription Expired
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, sub_type]
+        properties:
+          user_id:
+            type: string
+          sub_type:
+            type: integer
+
+    SubscriptionTerminatedEvent:
+      name: SubscriptionTerminatedEvent
+      title: Subscription Terminated
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id]
+        properties:
+          user_id:
+            type: string
+          reason:
+            type: string
+
+    # ─────── gRPC Request/Response Messages ───────
+
+    GetSubscriptionRequest:
+      name: GetSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    SubscriptionResponse:
+      name: SubscriptionResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          subscription:
+            $ref: '#/components/schemas/Subscription'
+
+    CheckAccessRequest:
+      name: CheckAccessRequest
+      payload:
+        type: object
+        required: [user_id, required_level]
+        properties:
+          user_id:
+            type: string
+          required_level:
+            type: integer
+
+    CheckAccessResponse:
+      name: CheckAccessResponse
+      payload:
+        type: object
+        properties:
+          has_access:
+            type: boolean
+          current_level:
+            type: integer
+          status:
+            type: string
+
+    CreateCheckoutRequest:
+      name: CreateCheckoutRequest
+      payload:
+        type: object
+        required: [access_token, plan_type, payment_method, duration_months]
+        properties:
+          access_token:
+            type: string
+          plan_type:
+            type: integer
+            description: "1=Lite, 2=Standard, 3=PRO"
+          payment_method:
+            type: string
+            description: '"cryptomus" or "fondy"'
+          duration_months:
+            type: integer
+            description: "1, 3, 6, or 12"
+          promo_code:
+            type: string
+            description: Optional promo code
+
+    CreateCheckoutResponse:
+      name: CreateCheckoutResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          payment_url:
+            type: string
+          order_id:
+            type: string
+          expires_in:
+            type: integer
+          proration:
+            $ref: '#/components/schemas/ProrationInfo'
+
+    CancelSubscriptionRequest:
+      name: CancelSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    RestoreSubscriptionRequest:
+      name: RestoreSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    AdminSetSubscriptionRequest:
+      name: AdminSetSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token, user_id, sub_type, duration_months]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          sub_type:
+            type: integer
+            description: "0=None, 1=Lite, 2=Standard, 3=PRO"
+          duration_months:
+            type: integer
+          issued_by:
+            type: string
+
+    AdminRemoveSubscriptionRequest:
+      name: AdminRemoveSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token, user_id]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          reason:
+            type: string
+
+    AdminRemoveSubscriptionResponse:
+      name: AdminRemoveSubscriptionResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    GetSubscriptionStatsRequest:
+      name: GetSubscriptionStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    SubscriptionStatsResponse:
+      name: SubscriptionStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          total_active:
+            type: integer
+          total_expired:
+            type: integer
+          total_canceled:
+            type: integer
+          total_terminated:
+            type: integer
+          by_tier:
+            type: array
+            items:
+              $ref: '#/components/schemas/TierCount'
+
+    CreatePromoCodeRequest:
+      name: CreatePromoCodeRequest
+      payload:
+        type: object
+        required: [access_token, code, discount_type, discount_value]
+        properties:
+          access_token:
+            type: string
+          code:
+            type: string
+          discount_type:
+            type: string
+            description: '"percentage" or "fixed"'
+          discount_value:
+            type: integer
+            description: Percentage (1-100) or fixed amount in cents
+          max_uses:
+            type: integer
+            description: 0 = unlimited
+          applicable_tiers:
+            type: array
+            items:
+              type: integer
+            description: Empty = all tiers
+          min_duration_months:
+            type: integer
+          valid_until:
+            type: string
+            description: ISO 8601, empty = no expiry
+
+    PromoCodeResponse:
+      name: PromoCodeResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          promo_code:
+            $ref: '#/components/schemas/PromoCode'
+
+    ListPromoCodesRequest:
+      name: ListPromoCodesRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          page:
+            type: integer
+          limit:
+            type: integer
+          active_only:
+            type: boolean
+
+    ListPromoCodesResponse:
+      name: ListPromoCodesResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          promo_codes:
+            type: array
+            items:
+              $ref: '#/components/schemas/PromoCode'
+          total:
+            type: integer
+
+    DeactivatePromoCodeRequest:
+      name: DeactivatePromoCodeRequest
+      payload:
+        type: object
+        required: [access_token, code]
+        properties:
+          access_token:
+            type: string
+          code:
+            type: string
+
+    DeactivatePromoCodeResponse:
+      name: DeactivatePromoCodeResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    ValidatePromoCodeRequest:
+      name: ValidatePromoCodeRequest
+      payload:
+        type: object
+        required: [access_token, code, plan_type, duration_months]
+        properties:
+          access_token:
+            type: string
+          code:
+            type: string
+          plan_type:
+            type: integer
+          duration_months:
+            type: integer
+
+    ValidatePromoCodeResponse:
+      name: ValidatePromoCodeResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          valid:
+            type: boolean
+          discount_type:
+            type: string
+          discount_value:
+            type: integer
+          discount_amount_cents:
+            type: integer
+            description: Calculated discount for this plan
+          final_price_cents:
+            type: integer
+            description: Price after discount
+          message:
+            type: string
+
+  schemas:
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        sub_type:
+          type: integer
+        free_trial:
+          type: boolean
+        status:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        grace_period_end:
+          type: string
+          format: date-time
+        issued_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProrationInfo:
+      type: object
+      properties:
+        remaining_days:
+          type: integer
+        remaining_value_cents:
+          type: integer
+        new_plan_price_cents:
+          type: integer
+        discount_cents:
+          type: integer
+        final_price_cents:
+          type: integer
+
+    TierCount:
+      type: object
+      properties:
+        tier:
+          type: integer
+        count:
+          type: integer
+
+    PromoCode:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        discount_type:
+          type: string
+        discount_value:
+          type: integer
+        max_uses:
+          type: integer
+        used_count:
+          type: integer
+        applicable_tiers:
+          type: array
+          items:
+            type: integer
+        min_duration_months:
+          type: integer
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

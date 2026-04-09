@@ -1,0 +1,588 @@
+directive @auth on FIELD_DEFINITION
+directive @requireRole(role: Role!) on FIELD_DEFINITION
+directive @rateLimit(max: Int!, window: String!) on FIELD_DEFINITION
+
+enum Role {
+  USER
+  ADMIN
+}
+
+# ───────────────────────── Types ─────────────────────────
+
+type User {
+  id: String!
+  email: String!
+  username: String!
+  externalId: String
+  provider: String
+  subscription: SubscriptionInfo
+}
+
+type SubscriptionInfo {
+  id: String
+  type: String
+  status: String
+  expiresAt: String
+}
+
+type Tokens {
+  accessToken: String!
+  refreshToken: String!
+  tokenType: String
+  expiresIn: Int
+}
+
+type UserProfile {
+  userId: String!
+  username: String!
+  displayName: String
+  avatarUrl: String
+}
+
+# ───────────────────────── Payloads ─────────────────────────
+
+type AuthPayload {
+  success: Boolean!
+  user: User
+  tokens: Tokens
+  requires2FA: Boolean
+}
+
+type OIDCPayload {
+  success: Boolean!
+  user: User
+  idToken: String
+  tokens: Tokens
+}
+
+type MessagePayload {
+  success: Boolean!
+  message: String
+}
+
+type Setup2FAPayload {
+  success: Boolean!
+  qrCode: String
+  secret: String
+  backupCodes: [String!]
+}
+
+type Verify2FAPayload {
+  success: Boolean!
+  message: String
+  accessToken: String
+  refreshToken: String
+}
+
+type TokenPayload {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type UpdateProfilePayload {
+  success: Boolean!
+  message: String
+  profile: UserProfile
+}
+
+type UploadAvatarPayload {
+  success: Boolean!
+  message: String
+  avatarUrl: String
+  profile: UserProfile
+}
+
+# ───────────────────── Notification Types ─────────────────────
+
+type Notification {
+  id: String!
+  userId: String!
+  type: String!
+  channel: String!
+  title: String!
+  body: String!
+  status: String!
+  read: Boolean!
+  createdAt: String
+  sentAt: String
+  readAt: String
+}
+
+type NotificationsPayload {
+  success: Boolean!
+  notifications: [Notification!]!
+  totalCount: Int!
+}
+
+type UnreadCountPayload {
+  success: Boolean!
+  count: Int!
+}
+
+type MarkAllAsReadPayload {
+  success: Boolean!
+  message: String
+  updatedCount: Int!
+}
+
+# ───────────────────────── News Types ─────────────────────────
+
+type Article {
+  id: String!
+  title: String!
+  slug: String!
+  content: String!
+  authorId: String!
+  categoryId: Int!
+  status: Int!
+  tags: [String!]
+  coverImageUrl: String
+  publishedAt: String
+  createdAt: String
+  updatedAt: String
+  categoryName: String
+}
+
+type ArticleSummary {
+  id: String!
+  title: String!
+  slug: String!
+  authorId: String!
+  categoryId: Int!
+  status: Int!
+  tags: [String!]
+  coverImageUrl: String
+  publishedAt: String
+  createdAt: String
+  categoryName: String
+}
+
+type PaginationMeta {
+  page: Int!
+  limit: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+type ArticlePayload {
+  success: Boolean!
+  article: Article
+}
+
+type ArticleListPayload {
+  success: Boolean!
+  articles: [ArticleSummary!]!
+  pagination: PaginationMeta
+}
+
+type Category {
+  id: Int!
+  name: String!
+  slug: String!
+  description: String
+  parentId: Int
+  createdAt: String
+  updatedAt: String
+}
+
+type CategoryPayload {
+  success: Boolean!
+  category: Category
+}
+
+type CategoryListPayload {
+  success: Boolean!
+  categories: [Category!]!
+}
+
+type UploadUrlPayload {
+  success: Boolean!
+  uploadUrl: String!
+  fileUrl: String!
+  expiresIn: Int!
+}
+
+# ───────────────────── Subscription Types ─────────────────────
+
+type SubscriptionDetail {
+  id: String!
+  userId: String!
+  subType: Int!
+  freeTrial: Boolean!
+  status: String!
+  startedAt: String
+  endedAt: String
+  gracePeriodEnd: String
+  issuedBy: String
+  createdAt: String
+  updatedAt: String
+}
+
+type SubscriptionPayload {
+  success: Boolean!
+  subscription: SubscriptionDetail
+}
+
+type ProrationInfo {
+  remainingDays: Int!
+  remainingValueCents: Int!
+  newPlanPriceCents: Int!
+  discountCents: Int!
+  finalPriceCents: Int!
+}
+
+type CheckoutPayload {
+  success: Boolean!
+  paymentUrl: String
+  orderId: String
+  expiresIn: Int
+  proration: ProrationInfo
+}
+
+type TierCount {
+  tier: Int!
+  count: Int!
+}
+
+type SubscriptionStatsPayload {
+  success: Boolean!
+  totalActive: Int!
+  totalExpired: Int!
+  totalCanceled: Int!
+  totalTerminated: Int!
+  byTier: [TierCount!]
+}
+
+type ValidatePromoCodePayload {
+  success: Boolean!
+  valid: Boolean!
+  discountType: String
+  discountValue: Int
+  discountAmountCents: Int
+  finalPriceCents: Int
+  message: String
+}
+
+# ───────────────────── Promo Code Types ─────────────────────
+
+type PromoCode {
+  id: String!
+  code: String!
+  discountType: String!
+  discountValue: Int!
+  maxUses: Int!
+  usedCount: Int!
+  applicableTiers: [Int!]
+  minDurationMonths: Int!
+  validFrom: String
+  validUntil: String
+  active: Boolean!
+  createdAt: String
+  updatedAt: String
+}
+
+type PromoCodePayload {
+  success: Boolean!
+  promoCode: PromoCode
+}
+
+type PromoCodeListPayload {
+  success: Boolean!
+  promoCodes: [PromoCode!]!
+  total: Int!
+}
+
+# ───────────────────────── Admin Types ─────────────────────────
+
+type AdminUser {
+  id: String!
+  email: String!
+  username: String!
+  role: Int!
+  status: Int!
+  createdAt: String
+  updatedAt: String
+  bannedAt: String
+  banReason: String
+}
+
+type DashboardStatsPayload {
+  success: Boolean!
+  totalUsers: Int!
+  totalBanned: Int!
+  totalArticles: Int!
+  totalCategories: Int!
+  totalViews: Int!
+  articlesToday: Int!
+  usersToday: Int!
+}
+
+type AdminUserListPayload {
+  success: Boolean!
+  users: [AdminUser!]!
+  pagination: PaginationMeta
+}
+
+type AdminUserPayload {
+  success: Boolean!
+  user: AdminUser
+}
+
+type AdminUserUpdatePayload {
+  success: Boolean!
+  message: String
+  user: AdminUser
+}
+
+type AdminArticle {
+  id: String!
+  title: String!
+  slug: String!
+  content: String!
+  authorId: String!
+  type: String!
+  coverImageUrl: String
+  viewCount: Int
+  publishedAt: String
+  createdAt: String
+  updatedAt: String
+  categories: [String!]
+}
+
+type AdminArticleStatsPayload {
+  success: Boolean!
+  totalArticles: Int!
+  totalBlog: Int!
+  totalNews: Int!
+  totalViews: Int!
+}
+
+type AdminSubscriptionStatsPayload {
+  success: Boolean!
+  totalActive: Int!
+  totalExpired: Int!
+  totalCanceled: Int!
+  totalTerminated: Int!
+  byTier: [TierCount!]
+}
+
+type AdminUploadUrlPayload {
+  success: Boolean!
+  uploadUrl: String!
+  fileUrl: String!
+  expiresIn: Int!
+}
+
+type AdminArticlePayload {
+  success: Boolean!
+  article: AdminArticle
+}
+
+type AdminSendNotificationPayload {
+  success: Boolean!
+  message: String
+  notificationId: String
+}
+
+input BulkRecipientInput {
+  userId: String!
+  email: String!
+}
+
+type AdminSendBulkNotificationPayload {
+  success: Boolean!
+  message: String
+  total: Int!
+  sent: Int!
+  failed: Int!
+}
+
+# ───────────────────────── Queries ─────────────────────────
+
+type Query {
+  me: UserProfile @auth
+  profile(userId: String!): UserProfile
+
+  # Notifications
+  notifications(limit: Int, offset: Int, typeFilter: String, readFilter: String): NotificationsPayload!
+    @auth
+  unreadCount: UnreadCountPayload! @auth
+
+  # News
+  article(id: String, slug: String): ArticlePayload!
+  articles(
+    page: Int
+    limit: Int
+    categoryId: Int
+    status: Int
+    sortBy: String
+    sortOrder: String
+    authorId: String
+  ): ArticleListPayload!
+  searchArticles(query: String!, page: Int, limit: Int, categoryId: Int): ArticleListPayload!
+  categories(parentId: Int): CategoryListPayload!
+
+  # Subscription
+  mySubscription: SubscriptionPayload! @auth
+  subscriptionStats: SubscriptionStatsPayload! @requireRole(role: ADMIN)
+  validatePromoCode(code: String!, planType: Int!, durationMonths: Int!): ValidatePromoCodePayload! @auth
+
+  # Admin
+  dashboardStats: DashboardStatsPayload! @requireRole(role: ADMIN)
+  adminUsers(page: Int, limit: Int, search: String, role: Int, status: Int): AdminUserListPayload!
+    @requireRole(role: ADMIN)
+  adminUser(userId: String!): AdminUserPayload! @requireRole(role: ADMIN)
+  adminArticleStats: AdminArticleStatsPayload! @requireRole(role: ADMIN)
+  adminSubscriptionStats: AdminSubscriptionStatsPayload! @requireRole(role: ADMIN)
+}
+
+# ───────────────────────── Mutations ─────────────────────────
+
+type Mutation {
+  register(email: String!, username: String!, password: String!, fingerprint: String): AuthPayload!
+    @rateLimit(max: 5, window: "1m")
+
+  login(emailUsername: String!, password: String!): AuthPayload!
+    @rateLimit(max: 10, window: "1m")
+
+  oidcLogin(code: String!, provider: String!, state: String!): OIDCPayload!
+
+  forgotPassword(email: String!): MessagePayload!
+    @rateLimit(max: 3, window: "1m")
+
+  verifyResetCode(email: String!, code: String!): MessagePayload!
+
+  resetPassword(email: String!, code: String!, newPassword: String!): MessagePayload!
+    @rateLimit(max: 3, window: "1m")
+
+  requestPasswordChange: MessagePayload! @auth
+  confirmPasswordChange(token: String!, newPassword: String!): MessagePayload!
+
+  setup2FA: Setup2FAPayload! @auth
+
+  verify2FA(code: String!): Verify2FAPayload! @auth
+
+  verifyEmail(token: String!): MessagePayload!
+
+  refreshTokens(refreshToken: String!): TokenPayload!
+
+  logout(refreshToken: String!): MessagePayload! @auth
+
+  updateProfile(username: String, displayName: String): UpdateProfilePayload!
+    @auth
+
+  uploadAvatar(imageBase64: String!, contentType: String!, fileName: String!): UploadAvatarPayload!
+    @auth
+
+  # Notifications
+  markAsRead(notificationId: String!): MessagePayload! @auth
+  markAllAsRead: MarkAllAsReadPayload! @auth
+  deleteNotification(notificationId: String!): MessagePayload! @auth
+
+  # News — Articles
+  createArticle(
+    title: String!
+    content: String!
+    categoryId: Int!
+    tags: [String!]
+    coverImageUrl: String
+    status: Int
+  ): ArticlePayload! @auth
+
+  updateArticle(
+    id: String!
+    title: String
+    content: String
+    categoryId: Int
+    tags: [String!]
+    coverImageUrl: String
+    status: Int
+  ): ArticlePayload! @auth
+
+  deleteArticle(id: String!): MessagePayload! @auth
+
+  # News — Categories (Admin only)
+  createCategory(name: String!, description: String, parentId: Int): CategoryPayload!
+    @requireRole(role: ADMIN)
+  updateCategory(id: Int!, name: String, description: String, parentId: Int): CategoryPayload!
+    @requireRole(role: ADMIN)
+  deleteCategory(id: Int!): MessagePayload! @requireRole(role: ADMIN)
+
+  # News — Media
+  getUploadUrl(filename: String!, contentType: String!, articleId: String): UploadUrlPayload! @auth
+
+  # Subscription
+  createCheckout(planType: Int!, paymentMethod: String!, durationMonths: Int!, promoCode: String): CheckoutPayload!
+    @auth @rateLimit(max: 5, window: "1m")
+
+  cancelSubscription: SubscriptionPayload! @auth
+
+  restoreSubscription: SubscriptionPayload! @auth
+
+  # Admin — User Management
+  updateUserRole(userId: String!, role: Int!): AdminUserUpdatePayload! @requireRole(role: ADMIN)
+  banUser(userId: String!, reason: String): MessagePayload! @requireRole(role: ADMIN)
+  unbanUser(userId: String!): MessagePayload! @requireRole(role: ADMIN)
+
+  # Admin — Articles (proxied to news-service via admin-service)
+  adminCreateArticle(
+    title: String!
+    content: String!
+    type: String!
+    coverImageUrl: String
+    categories: [String!]
+  ): AdminArticlePayload! @requireRole(role: ADMIN)
+
+  adminDeleteArticle(articleId: String!): MessagePayload! @requireRole(role: ADMIN)
+
+  adminGetUploadUrl(
+    filename: String!
+    contentType: String!
+    articleId: String
+  ): AdminUploadUrlPayload! @requireRole(role: ADMIN)
+
+  # Admin — Subscriptions (proxied to subscription-service via admin-service)
+  adminSetSubscription(
+    userId: String!
+    subType: Int!
+    durationMonths: Int!
+    issuedBy: String!
+  ): SubscriptionPayload! @requireRole(role: ADMIN)
+
+  adminRemoveSubscription(
+    userId: String!
+    reason: String
+  ): MessagePayload! @requireRole(role: ADMIN)
+
+  # Admin — Promo Codes (proxied to subscription-service via admin-service)
+  adminCreatePromoCode(
+    code: String!
+    discountType: String!
+    discountValue: Int!
+    maxUses: Int
+    applicableTiers: [Int!]
+    minDurationMonths: Int
+    validUntil: String
+  ): PromoCodePayload! @requireRole(role: ADMIN)
+
+  adminListPromoCodes(page: Int, limit: Int, activeOnly: Boolean): PromoCodeListPayload!
+    @requireRole(role: ADMIN)
+
+  adminDeactivatePromoCode(code: String!): MessagePayload! @requireRole(role: ADMIN)
+
+  # Admin — Notifications (proxied to notification-service via admin-service)
+  adminSendNotification(
+    userId: String!
+    email: String!
+    subject: String!
+    body: String!
+    channel: String
+  ): AdminSendNotificationPayload! @requireRole(role: ADMIN)
+
+  adminSendBulkNotification(
+    subject: String!
+    body: String!
+    channel: String
+    recipients: [BulkRecipientInput!]
+  ): AdminSendBulkNotificationPayload! @requireRole(role: ADMIN)
+}

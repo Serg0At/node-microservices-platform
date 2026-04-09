@@ -1,0 +1,30 @@
+{
+  "name": "microservices-arbex",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n auth,user,notification,news,gateway,payment,subscription,admin -c blue,green,yellow,red,magenta,cyan,white,bgBlue \"npm run dev -w auth-service\" \"npm run dev -w user-service\" \"npm run dev -w notification-service\" \"npm run dev -w news-service\" \"npm run dev -w graphql-gateway\" \"npm run dev -w payment-service\" \"npm run dev -w subscription-service\" \"npm run dev -w admin-service\"",
+    "dev:auth": "npm run dev -w auth-service",
+    "dev:user": "npm run dev -w user-service",
+    "dev:notification": "npm run dev -w notification-service",
+    "dev:news": "npm run dev -w news-service",
+    "dev:gateway": "npm run dev -w graphql-gateway",
+    "dev:payment": "npm run dev -w payment-service",
+    "dev:subscription": "npm run dev -w subscription-service",
+    "dev:admin": "npm run dev -w admin-service",
+    "install:all": "npm install -w auth-service && npm install -w user-service && npm install -w notification-service && npm install -w news-service && npm install -w graphql-gateway && npm install -w payment-service && npm install -w subscription-service && npm install -w admin-service",
+    "migrate:all": "npm run migrate -w auth-service && npm run migrate -w user-service && npm run migrate -w notification-service && npm run migrate -w news-service && npm run migrate -w payment-service && npm run migrate -w subscription-service"
+  },
+  "workspaces": [
+    "auth-service",
+    "user-service",
+    "notification-service",
+    "news-service",
+    "graphql-gateway",
+    "payment-service",
+    "subscription-service",
+    "admin-service"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

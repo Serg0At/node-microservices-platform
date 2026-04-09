@@ -1,0 +1,259 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "authpb";
+option java_multiple_files = true;
+
+/* =============================
+   AUTH SERVICE RPC DEFINITIONS
+   ============================= */
+
+// Metadata: user-agent — contains device fingerprint from frontend (used for session binding + trial abuse prevention)
+
+service AuthService {
+  rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
+  rpc LoginUser(LoginUserRequest) returns (LoginUserResponse);
+  rpc OIDCLogin(OIDCLoginRequest) returns (OIDCLoginResponse);
+  rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse);
+  rpc VerifyResetCode(VerifyResetCodeRequest) returns (VerifyResetCodeResponse);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc RequestPasswordChange(RequestPasswordChangeRequest) returns (RequestPasswordChangeResponse);
+  rpc ConfirmPasswordChange(ConfirmPasswordChangeRequest) returns (ConfirmPasswordChangeResponse);
+  rpc Setup2FA(Setup2FARequest) returns (Setup2FAResponse);
+  rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+  rpc RefreshTokens(RefreshTokensRequest) returns (RefreshTokensResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+
+/* =============================
+           USER STRUCT
+   ============================= */
+
+message User {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string external_id = 4;     // google_123, github_55 etc.
+  string provider = 5;      // google/github
+  SubscriptionInfo subscription = 6;
+}
+
+
+/* =============================
+         TOKEN STRUCTURES
+   ============================= */
+
+message Tokens {
+  string access_token = 1;
+  string refresh_token = 2;
+  string token_type = 3;      // Bearer
+  int32 expires_in = 4;       // 3600
+}
+
+
+/* =============================
+      DEVICE / SESSION INFO
+   ============================= */
+
+message SessionInfo {
+  string device = 1;
+  bool active = 2;
+  int64 last_seen = 3;
+}
+
+
+/* =============================
+  SUBSCRIPTION (EXAMPLE STRUCT)
+   ============================= */
+
+message SubscriptionInfo {
+  string id = 1;
+  string type = 2;           // free/pro/premium
+  string status = 3;         // active/expired
+  int64 expires_at = 4;
+}
+
+
+/* =============================
+        RPC REQUEST/RESPONSE
+   ============================= */
+
+/* ---- RegisterUser ---- */
+
+message RegisterUserRequest {
+  string email = 1;
+  string username = 2;
+  string password_hash = 3;
+  string fingerprint = 4;   // FingerprintJS visitorId from frontend
+  string ip = 5;             // Client IP forwarded by gateway
+}
+
+message RegisterUserResponse {
+  bool success = 1;
+  User user = 2;
+  Tokens tokens = 3;
+}
+
+
+/* ---- LoginUser ---- */
+
+message LoginUserRequest {
+  string email_username = 1;
+  string password_hash = 2;
+}
+
+message LoginUserResponse {
+  bool success = 1;
+  User user = 2;
+  Tokens tokens = 3;
+  bool requires_2fa = 4;
+}
+
+
+/* ---- OIDC Login ---- */
+
+message OIDCLoginRequest {
+  string code = 1;
+  string provider = 2;
+  string state = 3;
+}
+
+message OIDCLoginResponse {
+  bool success = 1;
+  User user = 2;
+  string id_token = 3;
+  Tokens tokens = 4;
+}
+
+
+/* ---- Forgot Password ---- */
+
+message ForgotPasswordRequest {
+  string email = 1;
+}
+
+message ForgotPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- Verify Reset Code (read-only check, does not consume the code) ---- */
+
+message VerifyResetCodeRequest {
+  string email = 1;
+  string code = 2;
+}
+
+message VerifyResetCodeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- Reset Password (after ForgotPassword, unauthenticated) ---- */
+
+message ResetPasswordRequest {
+  string email = 1;
+  string code = 2;
+  string new_pass = 3;
+}
+
+message ResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- Request Password Change (authenticated, sends email with link) ---- */
+
+message RequestPasswordChangeRequest {
+  string access_token = 1;
+}
+
+message RequestPasswordChangeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- Confirm Password Change (via token from email link) ---- */
+
+message ConfirmPasswordChangeRequest {
+  string token = 1;
+  string new_pass = 2;
+}
+
+message ConfirmPasswordChangeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- Setup 2FA ---- */
+
+message Setup2FARequest {
+  string access_token = 1;
+}
+
+message Setup2FAResponse {
+  bool success = 1;
+  string qr_code = 2;
+  string secret = 3;
+  repeated string backup_codes = 4;
+}
+
+
+/* ---- Verify 2FA ---- */
+
+message Verify2FARequest {
+  string code = 1;
+  string access_token = 2;
+}
+
+message Verify2FAResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;   // with acr=2fa
+  string refresh_token = 4;
+}
+
+
+/* ---- Verify Email ---- */
+
+message VerifyEmailRequest {
+  string token = 1;
+}
+
+message VerifyEmailResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+
+/* ---- Refresh Tokens ---- */
+
+message RefreshTokensRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokensResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+
+/* ---- Logout ---- */
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+}

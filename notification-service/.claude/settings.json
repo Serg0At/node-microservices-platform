@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/sergatoyan/Workspace/microservices-arbex/**)",
+      "Bash(grep -r \"sendNotification\\\\|SendNotification\" /home/sergatoyan/Workspace/microservices-arbex --include=*.js --include=*.ts --exclude-dir=node_modules)"
+    ]
+  }
+}

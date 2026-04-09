@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+package news;
+
+option go_package = "newspb";
+option java_multiple_files = true;
+
+/* =============================
+   NEWS SERVICE RPC DEFINITIONS
+   ============================= */
+
+service NewsService {
+  // Articles (admin-only: create, delete; public: get, list, search)
+  rpc CreateArticle(CreateArticleRequest) returns (ArticleResponse);
+  rpc DeleteArticle(DeleteArticleRequest) returns (DeleteResponse);
+  rpc GetArticle(GetArticleRequest) returns (ArticleResponse);
+  rpc ListArticles(ListArticlesRequest) returns (ListArticlesResponse);
+  rpc SearchArticles(SearchArticlesRequest) returns (ListArticlesResponse);
+
+  // Media (admin-only)
+  rpc GetUploadUrl(GetUploadUrlRequest) returns (GetUploadUrlResponse);
+
+  // Stats (admin-only)
+  rpc GetArticleStats(GetArticleStatsRequest) returns (ArticleStatsResponse);
+}
+
+
+/* =============================
+         ARTICLE STRUCT
+   ============================= */
+
+message Article {
+  string id = 1;
+  string title = 2;
+  string slug = 3;
+  string content = 4;
+  string author_id = 5;
+  string type = 6;               // "blog" or "news"
+  repeated string categories = 7;
+  string cover_image_url = 8;
+  int64 view_count = 9;
+  string published_at = 10;      // ISO 8601
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message ArticleSummary {
+  string id = 1;
+  string title = 2;
+  string slug = 3;
+  string author_id = 4;
+  string type = 5;
+  repeated string categories = 6;
+  string cover_image_url = 7;
+  int64 view_count = 8;
+  string published_at = 9;
+  string created_at = 10;
+}
+
+
+/* =============================
+         PAGINATION
+   ============================= */
+
+message PaginationMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int32 total = 3;
+  int32 total_pages = 4;
+}
+
+
+/* =============================
+      ARTICLE REQUESTS
+   ============================= */
+
+/* ---- CreateArticle ---- */
+
+message CreateArticleRequest {
+  string access_token = 1;
+  string title = 2;
+  string content = 3;
+  string type = 4;                // "blog" or "news"
+  string cover_image_url = 5;
+  repeated string categories = 6;
+}
+
+message ArticleResponse {
+  bool success = 1;
+  Article article = 2;
+}
+
+
+/* ---- DeleteArticle ---- */
+
+message DeleteArticleRequest {
+  string access_token = 1;
+  string id = 2;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* ---- GetArticle ---- */
+
+message GetArticleRequest {
+  string id = 1;
+  string slug = 2;              // lookup by ID or slug — one required
+}
+
+
+/* ---- ListArticles ---- */
+
+message ListArticlesRequest {
+  int32 page = 1;               // default 1
+  int32 limit = 2;              // default 10, max 50
+  string category = 3;          // optional filter — matches any article containing this category
+  string author_id = 4;         // optional filter
+}
+
+message ListArticlesResponse {
+  bool success = 1;
+  repeated ArticleSummary articles = 2;
+  PaginationMeta pagination = 3;
+}
+
+
+/* ---- SearchArticles ---- */
+
+message SearchArticlesRequest {
+  string query = 1;             // full-text search query
+  int32 page = 2;
+  int32 limit = 3;
+  string category = 4;          // optional filter
+  string author_id = 5;         // optional filter
+}
+
+
+/* =============================
+         MEDIA
+   ============================= */
+
+message GetUploadUrlRequest {
+  string access_token = 1;
+  string filename = 2;
+  string content_type = 3;      // e.g. "image/png"
+  string article_id = 4;        // optional
+}
+
+message GetUploadUrlResponse {
+  bool success = 1;
+  string upload_url = 2;        // pre-signed PUT URL
+  string file_url = 3;          // public URL after upload
+  int32 expires_in = 4;         // seconds
+}
+
+
+/* =============================
+         STATS (admin)
+   ============================= */
+
+message GetArticleStatsRequest {
+  string access_token = 1;
+}
+
+message ArticleStatsResponse {
+  bool success = 1;
+  int32 total_articles = 2;
+  int32 total_blog = 3;
+  int32 total_news = 4;
+  int64 total_views = 5;
+}

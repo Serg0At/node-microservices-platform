@@ -1,0 +1,273 @@
+asyncapi: 2.6.0
+
+info:
+  title: User Service
+  version: 1.0.0
+  description: |
+    User profile management microservice for the Arbex platform.
+    Owns user profile data (display name, avatar), stores avatars in MinIO (S3-compatible),
+    consumes auth-events via RabbitMQ, publishes user events, and exposes a gRPC API on port 50052.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50052
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Consumed Events (auth-events exchange) ───────────────
+
+  user.registered:
+    description: New user registered — creates a profile row with random default avatar
+    subscribe:
+      operationId: consumeUserRegistered
+      summary: Handle user registration
+      tags:
+        - name: consumed
+        - name: profile
+      message:
+        $ref: '#/components/messages/UserRegisteredEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+        queue:
+          name: user-service.registration.queue
+          durable: true
+
+  # ─────────────── Published Events (auth-events exchange) ───────────────
+
+  user.profile_updated:
+    description: Emitted when non-username profile fields are changed (e.g. display name)
+    publish:
+      operationId: publishUserProfileUpdated
+      summary: Profile updated
+      tags:
+        - name: published
+        - name: profile
+      message:
+        $ref: '#/components/messages/UserProfileUpdatedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  user.username_changed:
+    description: Emitted when username is changed — auth-service syncs this to the users table
+    publish:
+      operationId: publishUserUsernameChanged
+      summary: Username changed
+      tags:
+        - name: published
+        - name: profile
+      message:
+        $ref: '#/components/messages/UserUsernameChangedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: auth-events
+          type: topic
+          durable: true
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/GetProfile:
+    description: Fetch a user's public profile by user ID (public, no auth required)
+    publish:
+      operationId: grpcGetProfile
+      summary: Get profile
+      tags:
+        - name: grpc
+        - name: public
+      message:
+        $ref: '#/components/messages/GetProfileRequest'
+    subscribe:
+      operationId: grpcGetProfileResponse
+      message:
+        $ref: '#/components/messages/GetProfileResponse'
+
+  grpc/UpdateProfile:
+    description: Update username and/or display name (authenticated)
+    publish:
+      operationId: grpcUpdateProfile
+      summary: Update profile
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/UpdateProfileRequest'
+    subscribe:
+      operationId: grpcUpdateProfileResponse
+      message:
+        $ref: '#/components/messages/UpdateProfileResponse'
+
+  grpc/UploadAvatar:
+    description: Upload avatar image as raw bytes, stored in MinIO (authenticated)
+    publish:
+      operationId: grpcUploadAvatar
+      summary: Upload avatar
+      tags:
+        - name: grpc
+        - name: user
+      message:
+        $ref: '#/components/messages/UploadAvatarRequest'
+    subscribe:
+      operationId: grpcUploadAvatarResponse
+      message:
+        $ref: '#/components/messages/UploadAvatarResponse'
+
+components:
+  messages:
+    # ─────── Consumed RabbitMQ Events ───────
+
+    UserRegisteredEvent:
+      name: UserRegisteredEvent
+      title: User Registered
+      description: Creates a profile with user_id, username, and random default avatar
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, username]
+        properties:
+          user_id:
+            type: integer
+          email:
+            type: string
+            format: email
+          username:
+            type: string
+
+    # ─────── Published RabbitMQ Events ───────
+
+    UserProfileUpdatedEvent:
+      name: UserProfileUpdatedEvent
+      title: Profile Updated Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id]
+        properties:
+          user_id:
+            type: integer
+          display_name:
+            type: string
+          avatar_url:
+            type: string
+
+    UserUsernameChangedEvent:
+      name: UserUsernameChangedEvent
+      title: Username Changed Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [user_id, username]
+        properties:
+          user_id:
+            type: integer
+          username:
+            type: string
+
+    # ─────── gRPC Request/Response Messages ───────
+
+    GetProfileRequest:
+      name: GetProfileRequest
+      payload:
+        type: object
+        required: [user_id]
+        properties:
+          user_id:
+            type: string
+
+    GetProfileResponse:
+      name: GetProfileResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          profile:
+            $ref: '#/components/schemas/UserProfile'
+
+    UpdateProfileRequest:
+      name: UpdateProfileRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          username:
+            type: string
+          display_name:
+            type: string
+
+    UpdateProfileResponse:
+      name: UpdateProfileResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          profile:
+            $ref: '#/components/schemas/UserProfile'
+
+    UploadAvatarRequest:
+      name: UploadAvatarRequest
+      payload:
+        type: object
+        required: [access_token, image_data, content_type, file_name]
+        properties:
+          access_token:
+            type: string
+          image_data:
+            type: string
+            format: binary
+            description: Raw image bytes
+          content_type:
+            type: string
+          file_name:
+            type: string
+
+    UploadAvatarResponse:
+      name: UploadAvatarResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          avatar_url:
+            type: string
+          profile:
+            $ref: '#/components/schemas/UserProfile'
+
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string

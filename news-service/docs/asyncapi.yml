@@ -1,0 +1,452 @@
+asyncapi: 2.6.0
+
+info:
+  title: News Service
+  version: 1.0.0
+  description: |
+    News and blog content management microservice for the Arbex platform.
+    Manages articles, categories, media uploads (S3/MinIO), and full-text search.
+    Publishes article lifecycle events to RabbitMQ and exposes a gRPC API on port 50054.
+  contact:
+    name: Serg
+
+servers:
+  rabbitmq:
+    url: amqp://localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker
+  grpc:
+    url: localhost:50054
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Published Events (news-events exchange) ───────────────
+
+  article.created:
+    description: Emitted when a new article is created
+    publish:
+      operationId: publishArticleCreated
+      summary: Article created
+      tags:
+        - name: news
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/ArticleCreatedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: news-events
+          type: topic
+          durable: true
+
+  article.deleted:
+    description: Emitted when an article is deleted
+    publish:
+      operationId: publishArticleDeleted
+      summary: Article deleted
+      tags:
+        - name: news
+        - name: lifecycle
+      message:
+        $ref: '#/components/messages/ArticleDeletedEvent'
+    bindings:
+      amqp:
+        is: routingKey
+        exchange:
+          name: news-events
+          type: topic
+          durable: true
+
+  # ─────────────── gRPC Operations ───────────────
+
+  grpc/CreateArticle:
+    description: Create a new article with title, content, type, categories, and optional cover image (admin-only)
+    publish:
+      operationId: grpcCreateArticle
+      summary: Create article
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/CreateArticleRequest'
+    subscribe:
+      operationId: grpcCreateArticleResponse
+      message:
+        $ref: '#/components/messages/ArticleResponse'
+
+  grpc/DeleteArticle:
+    description: Delete an article by ID (admin-only)
+    publish:
+      operationId: grpcDeleteArticle
+      summary: Delete article
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/DeleteArticleRequest'
+    subscribe:
+      operationId: grpcDeleteArticleResponse
+      message:
+        $ref: '#/components/messages/DeleteResponse'
+
+  grpc/GetArticle:
+    description: Get a single article by ID or slug (public)
+    publish:
+      operationId: grpcGetArticle
+      summary: Get article
+      tags:
+        - name: grpc
+        - name: public
+      message:
+        $ref: '#/components/messages/GetArticleRequest'
+    subscribe:
+      operationId: grpcGetArticleResponse
+      message:
+        $ref: '#/components/messages/ArticleResponse'
+
+  grpc/ListArticles:
+    description: Paginated article list with category, author, and sort filters (public)
+    publish:
+      operationId: grpcListArticles
+      summary: List articles
+      tags:
+        - name: grpc
+        - name: public
+      message:
+        $ref: '#/components/messages/ListArticlesRequest'
+    subscribe:
+      operationId: grpcListArticlesResponse
+      message:
+        $ref: '#/components/messages/ListArticlesResponse'
+
+  grpc/SearchArticles:
+    description: Full-text search across article title and content (public)
+    publish:
+      operationId: grpcSearchArticles
+      summary: Search articles
+      tags:
+        - name: grpc
+        - name: public
+      message:
+        $ref: '#/components/messages/SearchArticlesRequest'
+    subscribe:
+      operationId: grpcSearchArticlesResponse
+      message:
+        $ref: '#/components/messages/ListArticlesResponse'
+
+  grpc/GetUploadUrl:
+    description: Get a presigned S3 upload URL for media files (authenticated)
+    publish:
+      operationId: grpcGetUploadUrl
+      summary: Get upload URL
+      tags:
+        - name: grpc
+        - name: media
+      message:
+        $ref: '#/components/messages/GetUploadUrlRequest'
+    subscribe:
+      operationId: grpcGetUploadUrlResponse
+      message:
+        $ref: '#/components/messages/GetUploadUrlResponse'
+
+  grpc/GetArticleStats:
+    description: Aggregate article stats — total, by type, total views (admin-only)
+    publish:
+      operationId: grpcGetArticleStats
+      summary: Get article stats
+      tags:
+        - name: grpc
+        - name: admin
+      message:
+        $ref: '#/components/messages/GetArticleStatsRequest'
+    subscribe:
+      operationId: grpcGetArticleStatsResponse
+      message:
+        $ref: '#/components/messages/ArticleStatsResponse'
+
+components:
+  messages:
+    # ─────── RabbitMQ Event Messages ───────
+
+    ArticleCreatedEvent:
+      name: ArticleCreatedEvent
+      title: Article Created Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [article_id, title, slug, author_id, status]
+        properties:
+          article_id:
+            type: string
+          title:
+            type: string
+          slug:
+            type: string
+          author_id:
+            type: string
+          status:
+            type: integer
+            description: "0=Draft, 1=Published, 2=Archived"
+
+    ArticleDeletedEvent:
+      name: ArticleDeletedEvent
+      title: Article Deleted Event
+      contentType: application/json
+      payload:
+        type: object
+        required: [article_id]
+        properties:
+          article_id:
+            type: string
+
+    # ─────── gRPC Request/Response Messages ───────
+
+    CreateArticleRequest:
+      name: CreateArticleRequest
+      payload:
+        type: object
+        required: [access_token, title, content, type]
+        properties:
+          access_token:
+            type: string
+          title:
+            type: string
+          content:
+            type: string
+          type:
+            type: string
+            description: '"blog" or "news"'
+          cover_image_url:
+            type: string
+          categories:
+            type: array
+            items:
+              type: string
+
+    ArticleResponse:
+      name: ArticleResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          article:
+            $ref: '#/components/schemas/Article'
+
+    DeleteArticleRequest:
+      name: DeleteArticleRequest
+      payload:
+        type: object
+        required: [access_token, id]
+        properties:
+          access_token:
+            type: string
+          id:
+            type: string
+
+    DeleteResponse:
+      name: DeleteResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    GetArticleRequest:
+      name: GetArticleRequest
+      payload:
+        type: object
+        properties:
+          id:
+            type: string
+          slug:
+            type: string
+            description: Lookup by ID or slug — one required
+
+    ListArticlesRequest:
+      name: ListArticlesRequest
+      payload:
+        type: object
+        properties:
+          page:
+            type: integer
+            default: 1
+          limit:
+            type: integer
+            default: 10
+            maximum: 50
+          category:
+            type: string
+            description: Optional filter — matches any article containing this category
+          author_id:
+            type: string
+
+    ListArticlesResponse:
+      name: ListArticlesResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          articles:
+            type: array
+            items:
+              $ref: '#/components/schemas/ArticleSummary'
+          pagination:
+            $ref: '#/components/schemas/PaginationMeta'
+
+    SearchArticlesRequest:
+      name: SearchArticlesRequest
+      payload:
+        type: object
+        required: [query]
+        properties:
+          query:
+            type: string
+            description: Full-text search query
+          page:
+            type: integer
+          limit:
+            type: integer
+          category:
+            type: string
+          author_id:
+            type: string
+
+    GetUploadUrlRequest:
+      name: GetUploadUrlRequest
+      payload:
+        type: object
+        required: [access_token, filename, content_type]
+        properties:
+          access_token:
+            type: string
+          filename:
+            type: string
+          content_type:
+            type: string
+            description: 'e.g. "image/png"'
+          article_id:
+            type: string
+
+    GetUploadUrlResponse:
+      name: GetUploadUrlResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          upload_url:
+            type: string
+            description: Pre-signed PUT URL
+          file_url:
+            type: string
+            description: Public URL after upload
+          expires_in:
+            type: integer
+            description: Seconds until URL expires
+
+    GetArticleStatsRequest:
+      name: GetArticleStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    ArticleStatsResponse:
+      name: ArticleStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          total_articles:
+            type: integer
+          total_blog:
+            type: integer
+          total_news:
+            type: integer
+          total_views:
+            type: integer
+
+  schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: string
+        type:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        cover_image_url:
+          type: string
+        view_count:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ArticleSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        author_id:
+          type: string
+        type:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        cover_image_url:
+          type: string
+        view_count:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer

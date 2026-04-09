@@ -1,0 +1,524 @@
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  description: |
+    REST representation of the AuthService gRPC API defined in `proto/auth.proto`.
+    All endpoints accept and return JSON. gRPC field names are preserved as-is (snake_case).
+  version: 1.0.0
+  contact:
+    name: Auth Service Team
+
+servers:
+  - url: /api/v1/auth
+    description: Auth service base path
+
+tags:
+  - name: Authentication
+    description: Registration, login, and OIDC flows
+  - name: Password
+    description: Password reset and recovery
+  - name: 2FA
+    description: Two-factor authentication setup and verification
+  - name: Email
+    description: Email verification
+  - name: Tokens
+    description: Token validation and refresh
+
+paths:
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      operationId: RegisterUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterUserRequest"
+      responses:
+        "200":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterUserResponse"
+        "400":
+          description: Invalid input
+        "409":
+          description: User already exists
+
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Log in with email/username and password
+      operationId: LoginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginUserResponse"
+        "401":
+          description: Invalid credentials
+
+  /oidc/login:
+    post:
+      tags: [Authentication]
+      summary: Log in via OIDC provider (Google, GitHub, etc.)
+      operationId: OIDCLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OIDCLoginRequest"
+      responses:
+        "200":
+          description: OIDC login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OIDCLoginResponse"
+        "401":
+          description: OIDC authentication failed
+
+  /password/reset:
+    post:
+      tags: [Password]
+      summary: Reset password (authenticated)
+      operationId: ResetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+        "401":
+          description: Invalid access token or old password mismatch
+
+  /password/forgot:
+    post:
+      tags: [Password]
+      summary: Request a password reset email
+      operationId: ForgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Reset email sent (always returns success to prevent user enumeration)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+
+  /2fa/setup:
+    post:
+      tags: [2FA]
+      summary: Set up two-factor authentication
+      operationId: Setup2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Setup2FARequest"
+      responses:
+        "200":
+          description: 2FA setup details returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setup2FAResponse"
+        "401":
+          description: Invalid access token
+
+  /2fa/verify:
+    post:
+      tags: [2FA]
+      summary: Verify a 2FA code
+      operationId: Verify2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Verify2FARequest"
+      responses:
+        "200":
+          description: 2FA verification successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verify2FAResponse"
+        "401":
+          description: Invalid code or access token
+
+  /email/verify:
+    post:
+      tags: [Email]
+      summary: Verify user email address
+      operationId: VerifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyEmailResponse"
+        "400":
+          description: Invalid or expired token
+
+  /token/validate:
+    post:
+      tags: [Tokens]
+      summary: Validate an access token
+      operationId: ValidateAccessToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateAccessTokenRequest"
+      responses:
+        "200":
+          description: Token validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateAccessTokenResponse"
+
+  /token/refresh:
+    post:
+      tags: [Tokens]
+      summary: Refresh access and refresh tokens
+      operationId: RefreshTokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokensRequest"
+      responses:
+        "200":
+          description: New token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokensResponse"
+        "401":
+          description: Invalid or expired refresh token
+
+components:
+  schemas:
+    # ── Shared models ──────────────────────────────
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        external_id:
+          type: string
+          description: "Provider-scoped ID (e.g. google_123, github_55)"
+        provider:
+          type: string
+          description: "OAuth provider name (google, github, etc.)"
+        subscription:
+          $ref: "#/components/schemas/SubscriptionInfo"
+
+    Tokens:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds
+          example: 3600
+
+    SessionInfo:
+      type: object
+      properties:
+        device:
+          type: string
+        active:
+          type: boolean
+        last_seen:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    SubscriptionInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: "Subscription tier: free, pro, or premium"
+          enum: [free, pro, premium]
+        status:
+          type: string
+          description: "Subscription status"
+          enum: [active, expired]
+        expires_at:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    # ── RegisterUser ───────────────────────────────
+
+    RegisterUserRequest:
+      type: object
+      required: [email, username, password_hash]
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        password_hash:
+          type: string
+
+    RegisterUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/User"
+        tokens:
+          $ref: "#/components/schemas/Tokens"
+
+    # ── LoginUser ──────────────────────────────────
+
+    LoginUserRequest:
+      type: object
+      required: [email_username, password_hash]
+      properties:
+        email_username:
+          type: string
+          description: Email or username
+        password_hash:
+          type: string
+
+    LoginUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/User"
+        tokens:
+          $ref: "#/components/schemas/Tokens"
+
+    # ── OIDCLogin ──────────────────────────────────
+
+    OIDCLoginRequest:
+      type: object
+      required: [code, provider]
+      properties:
+        code:
+          type: string
+          description: Authorization code from the OIDC provider
+        provider:
+          type: string
+          description: "Provider name (e.g. google, github)"
+        state:
+          type: string
+          description: CSRF state parameter
+
+    OIDCLoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/User"
+        id_token:
+          type: string
+          description: OIDC ID token
+        tokens:
+          $ref: "#/components/schemas/Tokens"
+
+    # ── ResetPassword ──────────────────────────────
+
+    ResetPasswordRequest:
+      type: object
+      required: [old_pass, new_pass, access_token]
+      properties:
+        old_pass:
+          type: string
+        new_pass:
+          type: string
+        access_token:
+          type: string
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    # ── ForgotPassword ─────────────────────────────
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    # ── Setup2FA ───────────────────────────────────
+
+    Setup2FARequest:
+      type: object
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+
+    Setup2FAResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        qr_code:
+          type: string
+          description: Base64-encoded QR code image or otpauth URI
+        secret:
+          type: string
+          description: TOTP secret key
+        backup_codes:
+          type: array
+          items:
+            type: string
+          description: One-time backup codes
+
+    # ── Verify2FA ──────────────────────────────────
+
+    Verify2FARequest:
+      type: object
+      required: [code, access_token]
+      properties:
+        code:
+          type: string
+          description: TOTP code from authenticator app
+        access_token:
+          type: string
+
+    Verify2FAResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        access_token:
+          type: string
+          description: "New access token with acr=2 (elevated auth)"
+
+    # ── VerifyEmail ────────────────────────────────
+
+    VerifyEmailRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Email verification token
+
+    VerifyEmailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    # ── ValidateAccessToken ────────────────────────
+
+    ValidateAccessTokenRequest:
+      type: object
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+
+    ValidateAccessTokenResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/User"
+        roles:
+          type: array
+          items:
+            type: string
+        session:
+          $ref: "#/components/schemas/SessionInfo"
+
+    # ── RefreshTokens ──────────────────────────────
+
+    RefreshTokensRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshTokensResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string

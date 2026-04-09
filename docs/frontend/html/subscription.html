@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription Service — Frontend Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--bg-sidebar:#090d13;--bg-card:#161b22;--bg-code:#1a2030;--bg-hover:#1f2937;--border:#21282f;--accent:#58a6ff;--accent-dim:rgba(88,166,255,.12);--blue:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#f0883e;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#6e7681;--sidebar-w:260px;--radius:8px}
+    html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex;min-height:100vh;font-size:14px}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#484f58}
+    .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;z-index:100}
+    .sidebar-header{padding:24px 20px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .svc-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+    .sidebar-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.sidebar-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .sidebar-nav{padding:12px 0;flex:1}.nav-group-label{padding:8px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim)}
+    .nav-link{display:flex;align-items:center;gap:8px;padding:6px 20px;color:var(--text-muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav-link:hover{color:var(--text);background:var(--bg-hover);border-left-color:var(--border)}.nav-link.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500}
+    .nav-link .dot{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0}.nav-link.active .dot{background:var(--accent)}
+    .nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;flex-shrink:0}
+    .badge-auth{background:rgba(88,166,255,.2);color:#58a6ff}.badge-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .main{margin-left:var(--sidebar-w);flex:1;padding:48px 64px;max-width:960px}
+    .page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+    .page-title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:12px}.page-title span{color:var(--accent)}
+    .page-desc{font-size:15px;color:var(--text-muted);max-width:640px;line-height:1.7}
+    .note{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text-muted);margin-bottom:36px}
+    .rpc{margin-bottom:52px;scroll-margin-top:24px}
+    .rpc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+    .rpc-name{font-size:18px;font-weight:600;color:var(--text)}
+    .label{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+    .label-auth{background:rgba(88,166,255,.15);color:#58a6ff}.label-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .rpc-desc{font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+    .rpc-desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    .table-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:6px}
+    .table-wrap{overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;font-size:13px}thead tr{background:var(--bg-card)}
+    th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top}tr:last-child td{border-bottom:none}
+    td code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    tbody tr:hover{background:rgba(255,255,255,.02)}
+    .req-yes{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(63,185,80,.15);color:#3fb950}
+    .req-no{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(139,148,158,.1);color:var(--text-dim)}
+    .code-block{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+    .code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e2530;border-bottom:1px solid var(--border)}
+    .code-lang{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .copy-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+    .copy-btn:hover{color:var(--text);border-color:#484f58;background:var(--bg-hover)}.copy-btn.copied{color:#3fb950;border-color:#3fb950}
+    .code-block pre{margin:0;padding:0;background:var(--bg-code)!important;border-radius:0}
+    .code-block pre code{font-family:'JetBrains Mono',monospace!important;font-size:12.5px!important;line-height:1.65!important;padding:16px!important;display:block;background:var(--bg-code)!important;overflow-x:auto}
+    .divider{border:none;border-top:1px solid var(--border);margin:40px 0}
+    .scroll-top{position:fixed;bottom:24px;right:24px;width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:16px;opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+    .scroll-top.visible{opacity:1;pointer-events:all}.scroll-top:hover{color:var(--text);border-color:#484f58}
+    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.main{margin-left:0;padding:24px 20px}}
+  </style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><div class="svc-icon">SUB</div><div><div class="sidebar-title">Subscription Service</div><div class="sidebar-sub">Frontend Reference</div></div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">RPCs</div>
+    <a href="#get-subscription"     class="nav-link active"><span class="dot"></span>GetSubscription <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#check-access"         class="nav-link"><span class="dot"></span>CheckAccess <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#create-checkout"      class="nav-link"><span class="dot"></span>CreateCheckout <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#cancel-subscription"  class="nav-link"><span class="dot"></span>CancelSubscription <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#restore-subscription" class="nav-link"><span class="dot"></span>RestoreSubscription <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#validate-promo-code"  class="nav-link"><span class="dot"></span>ValidatePromoCode <span class="nav-badge badge-auth">@auth</span></a>
+  </nav>
+</nav>
+<main class="main">
+  <div class="page-header">
+    <h1 class="page-title">Subscription Service <span>API Reference</span></h1>
+    <p class="page-desc">Manages the full subscription lifecycle including plan checkout, cancellation, restoration, and promo code validation. Publishes events to RabbitMQ on every subscription state change. All routes require a JWT access token.</p>
+  </div>
+  <div class="note">All RPCs are exposed through the GraphQL gateway. <code>sub_type</code>: <code>0</code>=None, <code>1</code>=Lite, <code>2</code>=Standard, <code>3</code>=PRO.</div>
+
+  <!-- GetSubscription -->
+  <section class="rpc" id="get-subscription">
+    <div class="rpc-header">
+      <span class="rpc-name">GetSubscription</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Returns the current user's active subscription details including tier, status, and access dates. Check <code>grace_period_end</code> — users retain access until this date even after expiry.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>subscription.id</code></td><td>string</td><td></td></tr>
+      <tr><td><code>subscription.sub_type</code></td><td>int</td><td><code>0</code>–<code>3</code></td></tr>
+      <tr><td><code>subscription.free_trial</code></td><td>bool</td><td>Whether this is a trial</td></tr>
+      <tr><td><code>subscription.status</code></td><td>string</td><td><code>active</code>, <code>canceled</code>, <code>expired</code>, <code>terminated</code></td></tr>
+      <tr><td><code>subscription.started_at</code></td><td>string</td><td>ISO 8601</td></tr>
+      <tr><td><code>subscription.ended_at</code></td><td>string</td><td>ISO 8601</td></tr>
+      <tr><td><code>subscription.grace_period_end</code></td><td>string</td><td>ISO 8601 — access retained until here</td></tr>
+      <tr><td><code>subscription.issued_by</code></td><td>string</td><td><code>"User"</code>, <code>"Admin"</code>, <code>"Promo"</code></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ..." }
+
+// Response
+{
+  "success": true,
+  "subscription": {
+    "id": "sub_1",
+    "user_id": "42",
+    "sub_type": 3,
+    "free_trial": false,
+    "status": "active",
+    "started_at": "2026-01-01T00:00:00Z",
+    "ended_at": "2027-01-01T00:00:00Z"
+  }
+}</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- CheckAccess -->
+  <section class="rpc" id="check-access">
+    <div class="rpc-header">
+      <span class="rpc-name">CheckAccess</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Checks whether the user has at least the required subscription level. Used internally by the gateway for feature gating — you can also call this directly to conditionally show/hide premium features.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>user_id</code></td><td>string</td><td><span class="req-yes">yes</span></td><td></td></tr>
+      <tr><td><code>required_level</code></td><td>int</td><td><span class="req-yes">yes</span></td><td>Minimum <code>sub_type</code> needed</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>has_access</code></td><td>bool</td><td><code>true</code> if <code>current_level &gt;= required_level</code></td></tr>
+      <tr><td><code>current_level</code></td><td>int</td><td>User's actual <code>sub_type</code></td></tr>
+      <tr><td><code>status</code></td><td>string</td><td>Subscription status</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "user_id": "42", "required_level": 2 }
+
+// Response
+{ "has_access": true, "current_level": 3, "status": "active" }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- CreateCheckout -->
+  <section class="rpc" id="create-checkout">
+    <div class="rpc-header">
+      <span class="rpc-name">CreateCheckout</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Initiates a payment checkout for a subscription plan. Redirect the user to <code>payment_url</code> to complete payment. The response also includes proration details if the user is upgrading an existing plan.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td></td></tr>
+      <tr><td><code>plan_type</code></td><td>int</td><td><span class="req-yes">yes</span></td><td><code>1</code>=Lite, <code>2</code>=Standard, <code>3</code>=PRO</td></tr>
+      <tr><td><code>payment_method</code></td><td>string</td><td><span class="req-yes">yes</span></td><td><code>"crypto"</code> or <code>"card"</code></td></tr>
+      <tr><td><code>duration_months</code></td><td>int</td><td><span class="req-yes">yes</span></td><td><code>1</code>, <code>3</code>, <code>6</code>, or <code>12</code></td></tr>
+      <tr><td><code>promo_code</code></td><td>string</td><td><span class="req-no">no</span></td><td>Optional discount code</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>payment_url</code></td><td>string</td><td>Redirect user here to complete payment</td></tr>
+      <tr><td><code>order_id</code></td><td>string</td><td>Internal order reference</td></tr>
+      <tr><td><code>expires_in</code></td><td>int</td><td>Seconds until checkout session expires</td></tr>
+      <tr><td><code>proration.remaining_days</code></td><td>int</td><td>Days left on current plan</td></tr>
+      <tr><td><code>proration.remaining_value_cents</code></td><td>int</td><td>Credit from current plan</td></tr>
+      <tr><td><code>proration.new_plan_price_cents</code></td><td>int</td><td>Full price of new plan</td></tr>
+      <tr><td><code>proration.discount_cents</code></td><td>int</td><td>Promo discount applied</td></tr>
+      <tr><td><code>proration.final_price_cents</code></td><td>int</td><td>Amount user will be charged</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ...", "plan_type": 3, "payment_method": "crypto", "duration_months": 12, "promo_code": "SAVE20" }
+
+// Response
+{
+  "success": true,
+  "payment_url": "https://pay.cryptomus.com/...",
+  "order_id": "ord_abc123",
+  "expires_in": 1800,
+  "proration": {
+    "remaining_days": 15,
+    "remaining_value_cents": 500,
+    "new_plan_price_cents": 9900,
+    "discount_cents": 1980,
+    "final_price_cents": 7420
+  }
+}</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- CancelSubscription -->
+  <section class="rpc" id="cancel-subscription">
+    <div class="rpc-header">
+      <span class="rpc-name">CancelSubscription</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Cancels the current user's subscription at period end. The user retains access until <code>ended_at</code> and can restore before then using <code>RestoreSubscription</code>.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ..." }
+
+// Response
+{ "success": true, "subscription": { "id": "sub_1", "status": "canceled", "ended_at": "2027-01-01T00:00:00Z" } }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- RestoreSubscription -->
+  <section class="rpc" id="restore-subscription">
+    <div class="rpc-header">
+      <span class="rpc-name">RestoreSubscription</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Restores a previously canceled subscription before it expires, setting status back to <code>active</code>.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ..." }
+
+// Response
+{ "success": true, "subscription": { "id": "sub_1", "status": "active" } }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- ValidatePromoCode -->
+  <section class="rpc" id="validate-promo-code">
+    <div class="rpc-header">
+      <span class="rpc-name">ValidatePromoCode</span>
+      <span class="label label-auth">@auth</span>
+    </div>
+    <p class="rpc-desc">Validates a promo code for a given plan and returns the calculated discount without creating a checkout — ideal for live discount previews in the UI.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>code</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>plan_type</code></td><td>int</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>duration_months</code></td><td>int</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>valid</code></td><td>bool</td><td>Whether the code is applicable</td></tr>
+      <tr><td><code>discount_type</code></td><td>string</td><td><code>"percentage"</code> or <code>"fixed"</code></td></tr>
+      <tr><td><code>discount_value</code></td><td>int</td><td></td></tr>
+      <tr><td><code>discount_amount_cents</code></td><td>int</td><td>Calculated saving in cents</td></tr>
+      <tr><td><code>final_price_cents</code></td><td>int</td><td>Price after discount</td></tr>
+      <tr><td><code>message</code></td><td>string</td><td>Error reason if <code>valid: false</code></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ...", "code": "SAVE20", "plan_type": 3, "duration_months": 12 }
+
+// Response
+{
+  "success": true,
+  "valid": true,
+  "discount_type": "percentage",
+  "discount_value": 20,
+  "discount_amount_cents": 1980,
+  "final_price_cents": 7920
+}</code></pre></div>
+  </section>
+</main>
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  function copyCode(btn) {
+    const code = btn.closest('.code-block').querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.textContent = 'Copied!'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+  const scrollTopBtn = document.getElementById('scrollTop');
+  window.addEventListener('scroll', () => { scrollTopBtn.classList.toggle('visible', window.scrollY > 300); });
+  const sections = document.querySelectorAll('.rpc[id]');
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

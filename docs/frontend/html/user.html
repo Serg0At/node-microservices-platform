@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Service — Frontend Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--bg-sidebar:#090d13;--bg-card:#161b22;--bg-code:#1a2030;--bg-hover:#1f2937;--border:#21282f;--accent:#3fb950;--accent-dim:rgba(63,185,80,.12);--blue:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#f0883e;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#6e7681;--sidebar-w:260px;--radius:8px}
+    html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex;min-height:100vh;font-size:14px}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#484f58}
+    .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;z-index:100}
+    .sidebar-header{padding:24px 20px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .svc-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+    .sidebar-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.sidebar-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .sidebar-nav{padding:12px 0;flex:1}.nav-group-label{padding:8px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim)}
+    .nav-link{display:flex;align-items:center;gap:8px;padding:6px 20px;color:var(--text-muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav-link:hover{color:var(--text);background:var(--bg-hover);border-left-color:var(--border)}.nav-link.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500}
+    .nav-link .dot{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0}.nav-link.active .dot{background:var(--accent)}
+    .nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;flex-shrink:0}
+    .badge-auth{background:rgba(225,0,152,.2);color:#e10098}.badge-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .main{margin-left:var(--sidebar-w);flex:1;padding:48px 64px;max-width:960px}
+    .page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+    .page-title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:12px}.page-title span{color:var(--accent)}
+    .page-desc{font-size:15px;color:var(--text-muted);max-width:640px;line-height:1.7}
+    .note{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text-muted);margin-bottom:36px}
+    .rpc{margin-bottom:52px;scroll-margin-top:24px}
+    .rpc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+    .rpc-name{font-size:18px;font-weight:600;color:var(--text)}
+    .label{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+    .label-auth{background:rgba(225,0,152,.15);color:#e10098}.label-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .rpc-desc{font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+    .rpc-desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    .table-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:6px}
+    .table-wrap{overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;font-size:13px}thead tr{background:var(--bg-card)}
+    th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top}tr:last-child td{border-bottom:none}
+    td code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    tbody tr:hover{background:rgba(255,255,255,.02)}
+    .req-yes{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(63,185,80,.15);color:#3fb950}
+    .req-no{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(139,148,158,.1);color:var(--text-dim)}
+    .code-block{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+    .code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e2530;border-bottom:1px solid var(--border)}
+    .code-lang{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .copy-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+    .copy-btn:hover{color:var(--text);border-color:#484f58;background:var(--bg-hover)}.copy-btn.copied{color:#3fb950;border-color:#3fb950}
+    .code-block pre{margin:0;padding:0;background:var(--bg-code)!important;border-radius:0}
+    .code-block pre code{font-family:'JetBrains Mono',monospace!important;font-size:12.5px!important;line-height:1.65!important;padding:16px!important;display:block;background:var(--bg-code)!important;overflow-x:auto}
+    .divider{border:none;border-top:1px solid var(--border);margin:40px 0}
+    .scroll-top{position:fixed;bottom:24px;right:24px;width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:16px;opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+    .scroll-top.visible{opacity:1;pointer-events:all}.scroll-top:hover{color:var(--text);border-color:#484f58}
+    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.main{margin-left:0;padding:24px 20px}}
+  </style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><div class="svc-icon">USR</div><div><div class="sidebar-title">User Service</div><div class="sidebar-sub">Frontend Reference</div></div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">RPCs</div>
+    <a href="#get-profile"    class="nav-link active"><span class="dot"></span>GetProfile <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#update-profile" class="nav-link"><span class="dot"></span>UpdateProfile <span class="nav-badge badge-auth">@auth</span></a>
+    <a href="#upload-avatar"  class="nav-link"><span class="dot"></span>UploadAvatar <span class="nav-badge badge-auth">@auth</span></a>
+  </nav>
+</nav>
+<main class="main">
+  <div class="page-header">
+    <h1 class="page-title">User Service <span>API Reference</span></h1>
+    <p class="page-desc">Manages public user profiles including display name, username, and avatar. Creates a profile automatically when a user registers. GetProfile is public; UpdateProfile and UploadAvatar require authentication.</p>
+  </div>
+  <div class="note">All RPCs are exposed through the GraphQL gateway.</div>
+
+  <section class="rpc" id="get-profile">
+    <div class="rpc-header"><span class="rpc-name">GetProfile</span><span class="label label-pub">public</span></div>
+    <p class="rpc-desc">Returns the public profile for any user by ID — no authentication required.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>user_id</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>profile.user_id</code></td><td>string</td><td></td></tr>
+      <tr><td><code>profile.username</code></td><td>string</td><td></td></tr>
+      <tr><td><code>profile.display_name</code></td><td>string</td><td></td></tr>
+      <tr><td><code>profile.avatar_url</code></td><td>string</td><td>Full URL to avatar image</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">// Request
+{ "user_id": "42" }
+
+// Response
+{ "success": true, "profile": { "user_id": "42", "username": "john_doe", "display_name": "John", "avatar_url": "https://cdn.../avatar.jpg" } }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <section class="rpc" id="update-profile">
+    <div class="rpc-header"><span class="rpc-name">UpdateProfile</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Updates the authenticated user's username and/or display name.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Valid JWT</td></tr>
+      <tr><td><code>username</code></td><td>string</td><td><span class="req-no">no</span></td><td>New username (must be unique)</td></tr>
+      <tr><td><code>display_name</code></td><td>string</td><td><span class="req-no">no</span></td><td>Display name (no uniqueness constraint)</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>message</code></td><td>string</td><td></td></tr>
+      <tr><td><code>profile</code></td><td>UserProfile</td><td>Updated profile</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "access_token": "eyJ...", "username": "john_updated", "display_name": "Johnny" }
+// Response
+{ "success": true, "message": "Profile updated", "profile": { "user_id": "42", "username": "john_updated", "display_name": "Johnny", "avatar_url": "https://cdn.../avatar.jpg" } }</code></pre></div>
+  </section>
+
+  <hr class="divider" />
+
+  <section class="rpc" id="upload-avatar">
+    <div class="rpc-header"><span class="rpc-name">UploadAvatar</span><span class="label label-auth">@auth</span></div>
+    <p class="rpc-desc">Uploads a new avatar image for the authenticated user and returns the updated profile with the new URL.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Valid JWT</td></tr>
+      <tr><td><code>image_data</code></td><td>bytes</td><td><span class="req-yes">yes</span></td><td>Raw image binary</td></tr>
+      <tr><td><code>content_type</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>e.g. "image/jpeg", "image/png"</td></tr>
+      <tr><td><code>file_name</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>e.g. "avatar.jpg"</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>success</code></td><td>bool</td><td></td></tr>
+      <tr><td><code>message</code></td><td>string</td><td></td></tr>
+      <tr><td><code>avatar_url</code></td><td>string</td><td>New public URL</td></tr>
+      <tr><td><code>profile</code></td><td>UserProfile</td><td>Updated profile</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json — example</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><code class="language-json">{ "access_token": "eyJ...", "image_data": "&lt;binary&gt;", "content_type": "image/jpeg", "file_name": "avatar.jpg" }
+// Response
+{ "success": true, "message": "Avatar uploaded", "avatar_url": "https://cdn.../avatars/42.jpg", "profile": { "user_id": "42", "username": "john_doe", "avatar_url": "https://cdn.../avatars/42.jpg" } }</code></pre></div>
+  </section>
+</main>
+<div class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+<script>
+  hljs.highlightAll();
+  function copyCode(btn){const c=btn.closest('.code-block').querySelector('code');navigator.clipboard.writeText(c.innerText).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}
+  const obs=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting){document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${en.target.id}"]`);if(a){a.classList.add('active');a.scrollIntoView({block:'nearest'})}}})},{rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('[id]').forEach(s=>obs.observe(s));
+  const st=document.getElementById('scrollTop');window.addEventListener('scroll',()=>st.classList.toggle('visible',scrollY>400));
+</script>
+</body>
+</html>

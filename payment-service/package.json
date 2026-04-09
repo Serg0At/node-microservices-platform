@@ -1,0 +1,39 @@
+{
+  "name": "payment-service",
+  "version": "1.0.0",
+  "description": "Payment microservice — handles crypto (Cryptomus) and card (Fondy) payments, webhook processing, RabbitMQ event publishing",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development nodemon src/app.js",
+    "start": "NODE_ENV=production node src/app.js",
+    "debug": "NODE_OPTIONS='--inspect' nodemon src/app.js",
+    "reload": "npx kill-port 50057 3001 && npm run dev",
+    "migrate": "node ./migrations/create_tables.js",
+    "migrate:down": "node ./migrations/drop_tables.js",
+    "proto:check": "find ./proto -name '*.proto' -print",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "check-format": "prettier --check .",
+    "asyncapi:docs": "asyncapi generate fromTemplate docs/asyncapi.yml @asyncapi/html-template -o docs/api-docs"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.2",
+    "@grpc/proto-loader": "^0.8.0",
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.0",
+    "ioredis": "^5.8.2",
+    "joi": "^18.0.2",
+    "knex": "^3.1.0",
+    "opossum": "^9.0.0",
+    "pg": "^8.16.3",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "author": "Serg",
+  "license": "ISC"
+}

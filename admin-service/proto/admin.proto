@@ -1,0 +1,357 @@
+syntax = "proto3";
+
+package admin;
+
+service AdminService {
+  // Dashboard
+  rpc GetDashboardStats (DashboardStatsRequest) returns (DashboardStatsResponse);
+
+  // User management
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+  rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUserRole (UpdateUserRoleRequest) returns (UpdateUserRoleResponse);
+  rpc BanUser (BanUserRequest) returns (BanUserResponse);
+  rpc UnbanUser (UnbanUserRequest) returns (UnbanUserResponse);
+
+  // News management (proxied to news-service)
+  rpc CreateArticle (AdminCreateArticleRequest) returns (AdminArticleResponse);
+  rpc DeleteArticle (AdminDeleteArticleRequest) returns (AdminDeleteArticleResponse);
+  rpc GetUploadUrl (AdminGetUploadUrlRequest) returns (AdminGetUploadUrlResponse);
+  rpc GetArticleStats (AdminGetArticleStatsRequest) returns (AdminArticleStatsResponse);
+
+  // Subscriptions (proxied to subscription-service)
+  rpc AdminSetSubscription (AdminSetSubscriptionRequest) returns (AdminSetSubscriptionResponse);
+  rpc AdminRemoveSubscription (AdminRemoveSubscriptionRequest) returns (AdminRemoveSubscriptionResponse);
+  rpc GetSubscriptionStats (AdminGetSubscriptionStatsRequest) returns (AdminSubscriptionStatsResponse);
+
+  // Promo codes (proxied to subscription-service)
+  rpc CreatePromoCode (AdminCreatePromoCodeRequest) returns (AdminPromoCodeResponse);
+  rpc ListPromoCodes (AdminListPromoCodesRequest) returns (AdminListPromoCodesResponse);
+  rpc DeactivatePromoCode (AdminDeactivatePromoCodeRequest) returns (AdminDeactivatePromoCodeResponse);
+
+  // Notifications (proxied to notification-service)
+  rpc AdminSendNotification (AdminSendNotificationRequest) returns (AdminSendNotificationResponse);
+  rpc AdminSendBulkNotification (AdminSendBulkNotificationRequest) returns (AdminSendBulkNotificationResponse);
+}
+
+// ─────────────────────── Dashboard ───────────────────────
+
+message DashboardStatsRequest {
+  string access_token = 1;
+}
+
+message DashboardStatsResponse {
+  bool success = 1;
+  int32 total_users = 2;
+  int32 total_articles = 3;
+  int32 total_categories = 4;
+  int32 total_views = 5;
+  int32 articles_today = 6;
+  int32 users_today = 7;
+  int32 total_banned = 8;
+}
+
+// ─────────────────────── User Management ───────────────────────
+
+message ListUsersRequest {
+  string access_token = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  string search = 4;
+  int32 role = 5;       // -1 = all, 0 = user, 1 = admin
+  int32 status = 6;     // -1 = all, 0 = active, 1 = banned
+}
+
+message ListUsersResponse {
+  bool success = 1;
+  repeated UserRecord users = 2;
+  PaginationMeta pagination = 3;
+}
+
+message GetUserRequest {
+  string access_token = 1;
+  string user_id = 2;
+}
+
+message GetUserResponse {
+  bool success = 1;
+  UserRecord user = 2;
+}
+
+message UpdateUserRoleRequest {
+  string access_token = 1;
+  string user_id = 2;
+  int32 role = 3;
+}
+
+message UpdateUserRoleResponse {
+  bool success = 1;
+  string message = 2;
+  UserRecord user = 3;
+}
+
+message BanUserRequest {
+  string access_token = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message BanUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UnbanUserRequest {
+  string access_token = 1;
+  string user_id = 2;
+}
+
+message UnbanUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ─────────────────────── News Management ───────────────────────
+
+message AdminCreateArticleRequest {
+  string access_token = 1;
+  string title = 2;
+  string content = 3;
+  string type = 4;               // "blog" or "news"
+  string cover_image_url = 5;
+  repeated string categories = 6;
+}
+
+message AdminArticleResponse {
+  bool success = 1;
+  ArticleRecord article = 2;
+}
+
+message AdminDeleteArticleRequest {
+  string access_token = 1;
+  string article_id = 2;
+}
+
+message AdminDeleteArticleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ArticleRecord {
+  string id = 1;
+  string title = 2;
+  string slug = 3;
+  string content = 4;
+  string author_id = 5;
+  string type = 6;
+  string cover_image_url = 7;
+  int64 view_count = 8;
+  string published_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  repeated string categories = 12;
+}
+
+// ---- Upload URL ----
+
+message AdminGetUploadUrlRequest {
+  string access_token = 1;
+  string filename = 2;
+  string content_type = 3;       // e.g. "image/png"
+  string article_id = 4;         // optional
+}
+
+message AdminGetUploadUrlResponse {
+  bool success = 1;
+  string upload_url = 2;
+  string file_url = 3;
+  int32 expires_in = 4;
+}
+
+// ---- Article Stats ----
+
+message AdminGetArticleStatsRequest {
+  string access_token = 1;
+}
+
+message AdminArticleStatsResponse {
+  bool success = 1;
+  int32 total_articles = 2;
+  int32 total_blog = 3;
+  int32 total_news = 4;
+  int64 total_views = 5;
+}
+
+// ─────────────────────── Subscriptions ───────────────────────
+
+message AdminSetSubscriptionRequest {
+  string access_token = 1;
+  string user_id = 2;
+  int32 sub_type = 3;            // 0=None, 1=Lite, 2=Standard, 3=PRO
+  int32 duration_months = 4;     // 1, 3, 6, 12
+  string issued_by = 5;          // "Admin", "Promo", etc.
+}
+
+message AdminSetSubscriptionResponse {
+  bool success = 1;
+  SubscriptionRecord subscription = 2;
+}
+
+message AdminRemoveSubscriptionRequest {
+  string access_token = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message AdminRemoveSubscriptionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AdminGetSubscriptionStatsRequest {
+  string access_token = 1;
+}
+
+message AdminTierCount {
+  int32 tier = 1;
+  int32 count = 2;
+}
+
+message AdminSubscriptionStatsResponse {
+  bool success = 1;
+  int32 total_active = 2;
+  int32 total_expired = 3;
+  int32 total_canceled = 4;
+  int32 total_terminated = 5;
+  repeated AdminTierCount by_tier = 6;
+}
+
+message SubscriptionRecord {
+  string id = 1;
+  string user_id = 2;
+  int32 sub_type = 3;
+  bool free_trial = 4;
+  string status = 5;
+  string started_at = 6;
+  string ended_at = 7;
+  string grace_period_end = 8;
+  string issued_by = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+// ─────────────────────── Promo Codes ───────────────────────
+
+message AdminPromoCodeRecord {
+  string id = 1;
+  string code = 2;
+  string discount_type = 3;
+  int32 discount_value = 4;
+  int32 max_uses = 5;
+  int32 used_count = 6;
+  repeated int32 applicable_tiers = 7;
+  int32 min_duration_months = 8;
+  string valid_from = 9;
+  string valid_until = 10;
+  bool active = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message AdminCreatePromoCodeRequest {
+  string access_token = 1;
+  string code = 2;
+  string discount_type = 3;          // "percentage" or "fixed"
+  int32 discount_value = 4;
+  int32 max_uses = 5;                // 0 = unlimited
+  repeated int32 applicable_tiers = 6;
+  int32 min_duration_months = 7;
+  string valid_until = 8;            // ISO 8601, empty = no expiry
+}
+
+message AdminPromoCodeResponse {
+  bool success = 1;
+  AdminPromoCodeRecord promo_code = 2;
+}
+
+message AdminListPromoCodesRequest {
+  string access_token = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  bool active_only = 4;
+}
+
+message AdminListPromoCodesResponse {
+  bool success = 1;
+  repeated AdminPromoCodeRecord promo_codes = 2;
+  int32 total = 3;
+}
+
+message AdminDeactivatePromoCodeRequest {
+  string access_token = 1;
+  string code = 2;
+}
+
+message AdminDeactivatePromoCodeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ─────────────────────── Notifications ───────────────────────
+
+message AdminSendNotificationRequest {
+  string access_token = 1;
+  string user_id = 2;
+  string email = 3;
+  string subject = 4;
+  string body = 5;
+  string channel = 6;          // "email" or "in_app", default "email"
+}
+
+message AdminSendNotificationResponse {
+  bool success = 1;
+  string message = 2;
+  string notification_id = 3;
+}
+
+message BulkRecipient {
+  string user_id = 1;
+  string email = 2;
+}
+
+message AdminSendBulkNotificationRequest {
+  string access_token = 1;
+  string subject = 2;
+  string body = 3;
+  string channel = 4;          // "email" or "in_app", default "email"
+  repeated BulkRecipient recipients = 5;
+}
+
+message AdminSendBulkNotificationResponse {
+  bool success = 1;
+  string message = 2;
+  int32 total = 3;
+  int32 sent = 4;
+  int32 failed = 5;
+}
+
+// ─────────────────────── Shared ───────────────────────
+
+message UserRecord {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  int32 role = 4;
+  int32 status = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  string banned_at = 8;
+  string ban_reason = 9;
+}
+
+message PaginationMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int32 total = 3;
+  int32 total_pages = 4;
+}

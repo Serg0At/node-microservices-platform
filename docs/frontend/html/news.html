@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>News Service — Frontend Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1117;--bg-sidebar:#090d13;--bg-card:#161b22;--bg-code:#1a2030;--bg-hover:#1f2937;--border:#21282f;--accent:#f0883e;--accent-dim:rgba(240,136,62,.12);--blue:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#f0883e;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#6e7681;--sidebar-w:260px;--radius:8px}
+    html{scroll-behavior:smooth}body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;display:flex;min-height:100vh;font-size:14px}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#484f58}
+    .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;z-index:100}
+    .sidebar-header{padding:24px 20px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .svc-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+    .sidebar-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.sidebar-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .sidebar-nav{padding:12px 0;flex:1}.nav-group-label{padding:8px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim)}
+    .nav-link{display:flex;align-items:center;gap:8px;padding:6px 20px;color:var(--text-muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav-link:hover{color:var(--text);background:var(--bg-hover);border-left-color:var(--border)}.nav-link.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:500}
+    .nav-link .dot{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0}.nav-link.active .dot{background:var(--accent)}
+    .nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;flex-shrink:0}
+    .badge-admin{background:rgba(245,158,11,.2);color:#f59e0b}.badge-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .main{margin-left:var(--sidebar-w);flex:1;padding:48px 64px;max-width:960px}
+    .page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+    .page-title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:12px}.page-title span{color:var(--accent)}
+    .page-desc{font-size:15px;color:var(--text-muted);max-width:640px;line-height:1.7}
+    .note{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--text-muted);margin-bottom:36px}
+    .rpc{margin-bottom:52px;scroll-margin-top:24px}
+    .rpc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+    .rpc-name{font-size:18px;font-weight:600;color:var(--text)}
+    .label{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+    .label-admin{background:rgba(245,158,11,.15);color:#f59e0b}.label-pub{background:rgba(63,185,80,.15);color:#3fb950}
+    .rpc-desc{font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+    .rpc-desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    .table-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);margin-bottom:6px}
+    .table-wrap{overflow-x:auto;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;font-size:13px}thead tr{background:var(--bg-card)}
+    th{padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top}tr:last-child td{border-bottom:none}
+    td code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--orange)}
+    tbody tr:hover{background:rgba(255,255,255,.02)}
+    .req-yes{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(63,185,80,.15);color:#3fb950}
+    .req-no{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(139,148,158,.1);color:var(--text-dim)}
+    .code-block{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+    .code-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e2530;border-bottom:1px solid var(--border)}
+    .code-lang{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .copy-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+    .copy-btn:hover{color:var(--text);border-color:#484f58;background:var(--bg-hover)}.copy-btn.copied{color:#3fb950;border-color:#3fb950}
+    .code-block pre{margin:0;padding:0;background:var(--bg-code)!important;border-radius:0}
+    .code-block pre code{font-family:'JetBrains Mono',monospace!important;font-size:12.5px!important;line-height:1.65!important;padding:16px!important;display:block;background:var(--bg-code)!important;overflow-x:auto}
+    .divider{border:none;border-top:1px solid var(--border);margin:40px 0}
+    .scroll-top{position:fixed;bottom:24px;right:24px;width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:16px;opacity:0;pointer-events:none;transition:all .2s;z-index:50}
+    .scroll-top.visible{opacity:1;pointer-events:all}.scroll-top:hover{color:var(--text);border-color:#484f58}
+    @media(max-width:900px){.sidebar{transform:translateX(-100%)}.main{margin-left:0;padding:24px 20px}}
+  </style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><div class="svc-icon">NWS</div><div><div class="sidebar-title">News Service</div><div class="sidebar-sub">Frontend Reference</div></div></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group-label">Public</div>
+    <a href="#get-article"     class="nav-link active"><span class="dot"></span>GetArticle <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#list-articles"   class="nav-link"><span class="dot"></span>ListArticles <span class="nav-badge badge-pub">pub</span></a>
+    <a href="#search-articles" class="nav-link"><span class="dot"></span>SearchArticles <span class="nav-badge badge-pub">pub</span></a>
+    <div class="nav-group-label">Admin Only</div>
+    <a href="#create-article"   class="nav-link"><span class="dot"></span>CreateArticle <span class="nav-badge badge-admin">admin</span></a>
+    <a href="#delete-article"   class="nav-link"><span class="dot"></span>DeleteArticle <span class="nav-badge badge-admin">admin</span></a>
+    <a href="#get-upload-url"   class="nav-link"><span class="dot"></span>GetUploadUrl <span class="nav-badge badge-admin">admin</span></a>
+    <a href="#get-article-stats" class="nav-link"><span class="dot"></span>GetArticleStats <span class="nav-badge badge-admin">admin</span></a>
+  </nav>
+</nav>
+<main class="main">
+  <div class="page-header">
+    <h1 class="page-title">News Service <span>API Reference</span></h1>
+    <p class="page-desc">Stores and serves articles (blogs and news), supports full-text search and category filtering, and provides presigned upload URLs for cover images. Read operations are public; write operations require an admin JWT.</p>
+  </div>
+  <div class="note">All RPCs are exposed through the GraphQL gateway. Read operations (<code>GetArticle</code>, <code>ListArticles</code>, <code>SearchArticles</code>) are public — no token needed.</div>
+
+  <!-- GetArticle -->
+  <section class="rpc" id="get-article">
+    <div class="rpc-header">
+      <span class="rpc-name">GetArticle</span>
+      <span class="label label-pub">public</span>
+    </div>
+    <p class="rpc-desc">Returns the full content of a single article. Look it up by <code>id</code> or <code>slug</code> — provide one or the other.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>id</code></td><td>string</td><td><span class="req-no">one of</span></td><td>Article ID</td></tr>
+      <tr><td><code>slug</code></td><td>string</td><td><span class="req-no">one of</span></td><td>URL-friendly slug</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>article.id</code></td><td>string</td><td></td></tr>
+      <tr><td><code>article.title</code></td><td>string</td><td></td></tr>
+      <tr><td><code>article.slug</code></td><td>string</td><td></td></tr>
+      <tr><td><code>article.content</code></td><td>string</td><td>Full article body</td></tr>
+      <tr><td><code>article.author_id</code></td><td>string</td><td></td></tr>
+      <tr><td><code>article.type</code></td><td>string</td><td><code>"blog"</code> or <code>"news"</code></td></tr>
+      <tr><td><code>article.categories</code></td><td>string[]</td><td></td></tr>
+      <tr><td><code>article.cover_image_url</code></td><td>string</td><td></td></tr>
+      <tr><td><code>article.view_count</code></td><td>int64</td><td></td></tr>
+      <tr><td><code>article.published_at</code></td><td>string</td><td>ISO 8601</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "slug": "market-update-april" }
+
+// Response
+{
+  "success": true,
+  "article": {
+    "id": "101",
+    "title": "Market Update April",
+    "slug": "market-update-april",
+    "content": "...",
+    "type": "news",
+    "categories": ["crypto"],
+    "view_count": 1240,
+    "published_at": "2026-04-01T08:00:00Z"
+  }
+}</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- ListArticles -->
+  <section class="rpc" id="list-articles">
+    <div class="rpc-header">
+      <span class="rpc-name">ListArticles</span>
+      <span class="label label-pub">public</span>
+    </div>
+    <p class="rpc-desc">Returns a paginated list of article summaries with optional category and author filters. Use this for article feeds and index pages.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>page</code></td><td>int</td><td><span class="req-no">no</span></td><td>Default 1</td></tr>
+      <tr><td><code>limit</code></td><td>int</td><td><span class="req-no">no</span></td><td>Default 10, max 50</td></tr>
+      <tr><td><code>category</code></td><td>string</td><td><span class="req-no">no</span></td><td>Filter by category name</td></tr>
+      <tr><td><code>author_id</code></td><td>string</td><td><span class="req-no">no</span></td><td>Filter by author</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>articles</code></td><td>ArticleSummary[]</td><td><code>id</code>, <code>title</code>, <code>slug</code>, <code>author_id</code>, <code>type</code>, <code>categories[]</code>, <code>cover_image_url</code>, <code>view_count</code>, <code>published_at</code></td></tr>
+      <tr><td><code>pagination.page</code></td><td>int</td><td></td></tr>
+      <tr><td><code>pagination.total</code></td><td>int</td><td></td></tr>
+      <tr><td><code>pagination.total_pages</code></td><td>int</td><td></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "page": 1, "limit": 10, "category": "crypto" }
+
+// Response
+{
+  "success": true,
+  "articles": [{ "id": "101", "title": "Market Update April", "slug": "market-update-april", "type": "news", "view_count": 1240 }],
+  "pagination": { "page": 1, "limit": 10, "total": 42, "total_pages": 5 }
+}</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- SearchArticles -->
+  <section class="rpc" id="search-articles">
+    <div class="rpc-header">
+      <span class="rpc-name">SearchArticles</span>
+      <span class="label label-pub">public</span>
+    </div>
+    <p class="rpc-desc">Full-text search across article titles and content. Response structure is identical to <code>ListArticles</code>.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>query</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Search term</td></tr>
+      <tr><td><code>page</code></td><td>int</td><td><span class="req-no">no</span></td><td>Default 1</td></tr>
+      <tr><td><code>limit</code></td><td>int</td><td><span class="req-no">no</span></td><td>Default 10, max 50</td></tr>
+      <tr><td><code>category</code></td><td>string</td><td><span class="req-no">no</span></td><td></td></tr>
+      <tr><td><code>author_id</code></td><td>string</td><td><span class="req-no">no</span></td><td></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "query": "bitcoin halving", "page": 1, "limit": 10 }
+
+// Response
+{
+  "success": true,
+  "articles": [{ "title": "Bitcoin Halving 2024 Analysis", "slug": "bitcoin-halving-2024" }],
+  "pagination": { "total": 3, "total_pages": 1 }
+}</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- CreateArticle -->
+  <section class="rpc" id="create-article">
+    <div class="rpc-header">
+      <span class="rpc-name">CreateArticle</span>
+      <span class="label label-admin">admin</span>
+    </div>
+    <p class="rpc-desc">Creates a new article. Use <code>GetUploadUrl</code> first to upload a cover image and obtain a public URL, then pass it as <code>cover_image_url</code>.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Admin JWT</td></tr>
+      <tr><td><code>title</code></td><td>string</td><td><span class="req-yes">yes</span></td><td></td></tr>
+      <tr><td><code>content</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>Full article body</td></tr>
+      <tr><td><code>type</code></td><td>string</td><td><span class="req-yes">yes</span></td><td><code>"blog"</code> or <code>"news"</code></td></tr>
+      <tr><td><code>cover_image_url</code></td><td>string</td><td><span class="req-no">no</span></td><td>URL from <code>GetUploadUrl</code></td></tr>
+      <tr><td><code>categories</code></td><td>string[]</td><td><span class="req-no">no</span></td><td></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ...", "title": "Bitcoin Halving 2024", "content": "...", "type": "news", "categories": ["bitcoin", "halving"] }
+
+// Response
+{ "success": true, "article": { "id": "102", "title": "Bitcoin Halving 2024", "slug": "bitcoin-halving-2024", "type": "news" } }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- DeleteArticle -->
+  <section class="rpc" id="delete-article">
+    <div class="rpc-header">
+      <span class="rpc-name">DeleteArticle</span>
+      <span class="label label-admin">admin</span>
+    </div>
+    <p class="rpc-desc">Permanently deletes an article by ID. This action is irreversible.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+      <tr><td><code>id</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ...", "id": "102" }
+
+// Response
+{ "success": true, "message": "Article deleted" }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- GetUploadUrl -->
+  <section class="rpc" id="get-upload-url">
+    <div class="rpc-header">
+      <span class="rpc-name">GetUploadUrl</span>
+      <span class="label label-admin">admin</span>
+    </div>
+    <p class="rpc-desc">Returns a pre-signed PUT URL for uploading a cover image directly from the browser. PUT the binary to <code>upload_url</code>, then use <code>file_url</code> as the article's <code>cover_image_url</code>. The <code>upload_url</code> expires after <code>expires_in</code> seconds.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td><td></td></tr>
+      <tr><td><code>filename</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>e.g. <code>"cover.jpg"</code></td></tr>
+      <tr><td><code>content_type</code></td><td>string</td><td><span class="req-yes">yes</span></td><td>e.g. <code>"image/jpeg"</code></td></tr>
+      <tr><td><code>article_id</code></td><td>string</td><td><span class="req-no">no</span></td><td>Associate with an existing article</td></tr>
+    </tbody></table></div>
+    <div class="table-label">Response</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+      <tr><td><code>upload_url</code></td><td>string</td><td>PUT image binary here — expires in <code>expires_in</code> seconds</td></tr>
+      <tr><td><code>file_url</code></td><td>string</td><td>Public URL to use as <code>cover_image_url</code></td></tr>
+      <tr><td><code>expires_in</code></td><td>int</td><td>Seconds</td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Request
+{ "access_token": "eyJ...", "filename": "cover.jpg", "content_type": "image/jpeg" }
+
+// Response
+{ "success": true, "upload_url": "https://s3.../presigned...", "file_url": "https://cdn.../cover.jpg", "expires_in": 300 }</code></pre></div>
+  </section>
+  <hr class="divider" />
+
+  <!-- GetArticleStats -->
+  <section class="rpc" id="get-article-stats">
+    <div class="rpc-header">
+      <span class="rpc-name">GetArticleStats</span>
+      <span class="label label-admin">admin</span>
+    </div>
+    <p class="rpc-desc">Returns aggregate article counts and total views broken down by type — for admin dashboards.</p>
+    <div class="table-label">Request</div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead><tbody>
+      <tr><td><code>access_token</code></td><td>string</td><td><span class="req-yes">yes</span></td></tr>
+    </tbody></table></div>
+    <div class="code-block"><div class="code-header"><span class="code-lang">json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code class="language-json">// Response
+{
+  "success": true,
+  "total_articles": 240,
+  "total_blog": 80,
+  "total_news": 160,
+  "total_views": 48200
+}</code></pre></div>
+  </section>
+</main>
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { hljs.highlightAll(); });
+  function copyCode(btn) {
+    const code = btn.closest('.code-block').querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.textContent = 'Copied!'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+  const scrollTopBtn = document.getElementById('scrollTop');
+  window.addEventListener('scroll', () => { scrollTopBtn.classList.toggle('visible', window.scrollY > 300); });
+  const sections = document.querySelectorAll('.rpc[id]');
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

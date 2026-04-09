@@ -1,0 +1,975 @@
+asyncapi: 2.6.0
+
+info:
+  title: Admin Service
+  version: 1.0.0
+  description: |
+    Admin dashboard and management microservice for the Arbex platform.
+    Provides dashboard analytics, user management (roles, bans), and proxies
+    article, subscription, promo code, and notification operations to their
+    respective services. gRPC-only, no RabbitMQ — all operations are synchronous.
+    Exposes a gRPC API on port 50055.
+  contact:
+    name: Serg
+
+servers:
+  grpc:
+    url: localhost:50055
+    protocol: grpc
+    description: gRPC server
+
+defaultContentType: application/json
+
+channels:
+  # ─────────────── Dashboard ───────────────
+
+  grpc/GetDashboardStats:
+    description: Aggregate platform stats — users, articles, categories, views, today counts, banned count. Cached in Redis (60s TTL).
+    publish:
+      operationId: grpcGetDashboardStats
+      summary: Get dashboard stats
+      tags:
+        - name: grpc
+        - name: dashboard
+      message:
+        $ref: '#/components/messages/DashboardStatsRequest'
+    subscribe:
+      operationId: grpcGetDashboardStatsResponse
+      message:
+        $ref: '#/components/messages/DashboardStatsResponse'
+
+  # ─────────────── User Management ───────────────
+
+  grpc/ListUsers:
+    description: Paginated user list with search, role filter, and ban status filter
+    publish:
+      operationId: grpcListUsers
+      summary: List users
+      tags:
+        - name: grpc
+        - name: users
+      message:
+        $ref: '#/components/messages/ListUsersRequest'
+    subscribe:
+      operationId: grpcListUsersResponse
+      message:
+        $ref: '#/components/messages/ListUsersResponse'
+
+  grpc/GetUser:
+    description: Get a single user by ID
+    publish:
+      operationId: grpcGetUser
+      summary: Get user
+      tags:
+        - name: grpc
+        - name: users
+      message:
+        $ref: '#/components/messages/GetUserRequest'
+    subscribe:
+      operationId: grpcGetUserResponse
+      message:
+        $ref: '#/components/messages/GetUserResponse'
+
+  grpc/UpdateUserRole:
+    description: Change a user's role (0=user, 1=admin). Cannot change own role.
+    publish:
+      operationId: grpcUpdateUserRole
+      summary: Update user role
+      tags:
+        - name: grpc
+        - name: users
+      message:
+        $ref: '#/components/messages/UpdateUserRoleRequest'
+    subscribe:
+      operationId: grpcUpdateUserRoleResponse
+      message:
+        $ref: '#/components/messages/UpdateUserRoleResponse'
+
+  grpc/BanUser:
+    description: Ban a user with optional reason. Cannot ban admins or self.
+    publish:
+      operationId: grpcBanUser
+      summary: Ban user
+      tags:
+        - name: grpc
+        - name: users
+      message:
+        $ref: '#/components/messages/BanUserRequest'
+    subscribe:
+      operationId: grpcBanUserResponse
+      message:
+        $ref: '#/components/messages/BanUserResponse'
+
+  grpc/UnbanUser:
+    description: Remove ban from a user
+    publish:
+      operationId: grpcUnbanUser
+      summary: Unban user
+      tags:
+        - name: grpc
+        - name: users
+      message:
+        $ref: '#/components/messages/UnbanUserRequest'
+    subscribe:
+      operationId: grpcUnbanUserResponse
+      message:
+        $ref: '#/components/messages/UnbanUserResponse'
+
+  # ─────────────── News Management (proxied to news-service) ───────────────
+
+  grpc/CreateArticle:
+    description: Create an article — proxied to news-service with access_token passthrough
+    publish:
+      operationId: grpcCreateArticle
+      summary: Create article
+      tags:
+        - name: grpc
+        - name: news
+      message:
+        $ref: '#/components/messages/AdminCreateArticleRequest'
+    subscribe:
+      operationId: grpcCreateArticleResponse
+      message:
+        $ref: '#/components/messages/AdminArticleResponse'
+
+  grpc/DeleteArticle:
+    description: Delete an article — proxied to news-service with access_token passthrough
+    publish:
+      operationId: grpcDeleteArticle
+      summary: Delete article
+      tags:
+        - name: grpc
+        - name: news
+      message:
+        $ref: '#/components/messages/AdminDeleteArticleRequest'
+    subscribe:
+      operationId: grpcDeleteArticleResponse
+      message:
+        $ref: '#/components/messages/AdminDeleteArticleResponse'
+
+  grpc/GetUploadUrl:
+    description: Get a presigned S3 upload URL — proxied to news-service
+    publish:
+      operationId: grpcGetUploadUrl
+      summary: Get upload URL
+      tags:
+        - name: grpc
+        - name: news
+      message:
+        $ref: '#/components/messages/AdminGetUploadUrlRequest'
+    subscribe:
+      operationId: grpcGetUploadUrlResponse
+      message:
+        $ref: '#/components/messages/AdminGetUploadUrlResponse'
+
+  grpc/GetArticleStats:
+    description: Aggregate article stats — proxied to news-service
+    publish:
+      operationId: grpcGetArticleStats
+      summary: Get article stats
+      tags:
+        - name: grpc
+        - name: news
+      message:
+        $ref: '#/components/messages/AdminGetArticleStatsRequest'
+    subscribe:
+      operationId: grpcGetArticleStatsResponse
+      message:
+        $ref: '#/components/messages/AdminArticleStatsResponse'
+
+  # ─────────────── Subscriptions (proxied to subscription-service) ───────────────
+
+  grpc/AdminSetSubscription:
+    description: Manually set a user's subscription — proxied to subscription-service
+    publish:
+      operationId: grpcAdminSetSubscription
+      summary: Admin set subscription
+      tags:
+        - name: grpc
+        - name: subscription
+      message:
+        $ref: '#/components/messages/AdminSetSubscriptionRequest'
+    subscribe:
+      operationId: grpcAdminSetSubscriptionResponse
+      message:
+        $ref: '#/components/messages/AdminSetSubscriptionResponse'
+
+  grpc/AdminRemoveSubscription:
+    description: Terminate a user's subscription — proxied to subscription-service
+    publish:
+      operationId: grpcAdminRemoveSubscription
+      summary: Admin remove subscription
+      tags:
+        - name: grpc
+        - name: subscription
+      message:
+        $ref: '#/components/messages/AdminRemoveSubscriptionRequest'
+    subscribe:
+      operationId: grpcAdminRemoveSubscriptionResponse
+      message:
+        $ref: '#/components/messages/AdminRemoveSubscriptionResponse'
+
+  grpc/GetSubscriptionStats:
+    description: Subscription stats by status and tier — proxied to subscription-service
+    publish:
+      operationId: grpcGetSubscriptionStats
+      summary: Get subscription stats
+      tags:
+        - name: grpc
+        - name: subscription
+      message:
+        $ref: '#/components/messages/AdminGetSubscriptionStatsRequest'
+    subscribe:
+      operationId: grpcGetSubscriptionStatsResponse
+      message:
+        $ref: '#/components/messages/AdminSubscriptionStatsResponse'
+
+  # ─────────────── Promo Codes (proxied to subscription-service) ───────────────
+
+  grpc/CreatePromoCode:
+    description: Create a new promo code — proxied to subscription-service
+    publish:
+      operationId: grpcCreatePromoCode
+      summary: Create promo code
+      tags:
+        - name: grpc
+        - name: promo
+      message:
+        $ref: '#/components/messages/AdminCreatePromoCodeRequest'
+    subscribe:
+      operationId: grpcCreatePromoCodeResponse
+      message:
+        $ref: '#/components/messages/AdminPromoCodeResponse'
+
+  grpc/ListPromoCodes:
+    description: List promo codes — proxied to subscription-service
+    publish:
+      operationId: grpcListPromoCodes
+      summary: List promo codes
+      tags:
+        - name: grpc
+        - name: promo
+      message:
+        $ref: '#/components/messages/AdminListPromoCodesRequest'
+    subscribe:
+      operationId: grpcListPromoCodesResponse
+      message:
+        $ref: '#/components/messages/AdminListPromoCodesResponse'
+
+  grpc/DeactivatePromoCode:
+    description: Deactivate a promo code — proxied to subscription-service
+    publish:
+      operationId: grpcDeactivatePromoCode
+      summary: Deactivate promo code
+      tags:
+        - name: grpc
+        - name: promo
+      message:
+        $ref: '#/components/messages/AdminDeactivatePromoCodeRequest'
+    subscribe:
+      operationId: grpcDeactivatePromoCodeResponse
+      message:
+        $ref: '#/components/messages/AdminDeactivatePromoCodeResponse'
+
+  # ─────────────── Notifications (proxied to notification-service) ───────────────
+
+  grpc/AdminSendNotification:
+    description: Send a notification to a single user — proxied to notification-service
+    publish:
+      operationId: grpcAdminSendNotification
+      summary: Send notification
+      tags:
+        - name: grpc
+        - name: notification
+      message:
+        $ref: '#/components/messages/AdminSendNotificationRequest'
+    subscribe:
+      operationId: grpcAdminSendNotificationResponse
+      message:
+        $ref: '#/components/messages/AdminSendNotificationResponse'
+
+  grpc/AdminSendBulkNotification:
+    description: Send notification to multiple users — fan-out via notification-service in batches of 50
+    publish:
+      operationId: grpcAdminSendBulkNotification
+      summary: Send bulk notification
+      tags:
+        - name: grpc
+        - name: notification
+      message:
+        $ref: '#/components/messages/AdminSendBulkNotificationRequest'
+    subscribe:
+      operationId: grpcAdminSendBulkNotificationResponse
+      message:
+        $ref: '#/components/messages/AdminSendBulkNotificationResponse'
+
+components:
+  messages:
+    # ─────── Dashboard ───────
+
+    DashboardStatsRequest:
+      name: DashboardStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    DashboardStatsResponse:
+      name: DashboardStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          total_users:
+            type: integer
+          total_articles:
+            type: integer
+          total_categories:
+            type: integer
+          total_views:
+            type: integer
+          articles_today:
+            type: integer
+          users_today:
+            type: integer
+          total_banned:
+            type: integer
+
+    # ─────── User Management ───────
+
+    ListUsersRequest:
+      name: ListUsersRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          page:
+            type: integer
+          limit:
+            type: integer
+          search:
+            type: string
+          role:
+            type: integer
+            description: "-1=all, 0=user, 1=admin"
+          status:
+            type: integer
+            description: "-1=all, 0=active, 1=banned"
+
+    ListUsersResponse:
+      name: ListUsersResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          users:
+            type: array
+            items:
+              $ref: '#/components/schemas/UserRecord'
+          pagination:
+            $ref: '#/components/schemas/PaginationMeta'
+
+    GetUserRequest:
+      name: GetUserRequest
+      payload:
+        type: object
+        required: [access_token, user_id]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+
+    GetUserResponse:
+      name: GetUserResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          user:
+            $ref: '#/components/schemas/UserRecord'
+
+    UpdateUserRoleRequest:
+      name: UpdateUserRoleRequest
+      payload:
+        type: object
+        required: [access_token, user_id, role]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          role:
+            type: integer
+            description: "0=user, 1=admin"
+
+    UpdateUserRoleResponse:
+      name: UpdateUserRoleResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          user:
+            $ref: '#/components/schemas/UserRecord'
+
+    BanUserRequest:
+      name: BanUserRequest
+      payload:
+        type: object
+        required: [access_token, user_id]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          reason:
+            type: string
+
+    BanUserResponse:
+      name: BanUserResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    UnbanUserRequest:
+      name: UnbanUserRequest
+      payload:
+        type: object
+        required: [access_token, user_id]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+
+    UnbanUserResponse:
+      name: UnbanUserResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    # ─────── News Management ───────
+
+    AdminCreateArticleRequest:
+      name: AdminCreateArticleRequest
+      payload:
+        type: object
+        required: [access_token, title, content, type]
+        properties:
+          access_token:
+            type: string
+          title:
+            type: string
+          content:
+            type: string
+          type:
+            type: string
+            description: '"blog" or "news"'
+          cover_image_url:
+            type: string
+          categories:
+            type: array
+            items:
+              type: string
+
+    AdminArticleResponse:
+      name: AdminArticleResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          article:
+            $ref: '#/components/schemas/ArticleRecord'
+
+    AdminDeleteArticleRequest:
+      name: AdminDeleteArticleRequest
+      payload:
+        type: object
+        required: [access_token, article_id]
+        properties:
+          access_token:
+            type: string
+          article_id:
+            type: string
+
+    AdminDeleteArticleResponse:
+      name: AdminDeleteArticleResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    AdminGetUploadUrlRequest:
+      name: AdminGetUploadUrlRequest
+      payload:
+        type: object
+        required: [access_token, filename, content_type]
+        properties:
+          access_token:
+            type: string
+          filename:
+            type: string
+          content_type:
+            type: string
+          article_id:
+            type: string
+
+    AdminGetUploadUrlResponse:
+      name: AdminGetUploadUrlResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          upload_url:
+            type: string
+          file_url:
+            type: string
+          expires_in:
+            type: integer
+
+    AdminGetArticleStatsRequest:
+      name: AdminGetArticleStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    AdminArticleStatsResponse:
+      name: AdminArticleStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          total_articles:
+            type: integer
+          total_blog:
+            type: integer
+          total_news:
+            type: integer
+          total_views:
+            type: integer
+
+    # ─────── Subscriptions ───────
+
+    AdminSetSubscriptionRequest:
+      name: AdminSetSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token, user_id, sub_type, duration_months]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          sub_type:
+            type: integer
+            description: "0=None, 1=Lite, 2=Standard, 3=PRO"
+          duration_months:
+            type: integer
+          issued_by:
+            type: string
+
+    AdminSetSubscriptionResponse:
+      name: AdminSetSubscriptionResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          subscription:
+            $ref: '#/components/schemas/SubscriptionRecord'
+
+    AdminRemoveSubscriptionRequest:
+      name: AdminRemoveSubscriptionRequest
+      payload:
+        type: object
+        required: [access_token, user_id]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          reason:
+            type: string
+
+    AdminRemoveSubscriptionResponse:
+      name: AdminRemoveSubscriptionResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    AdminGetSubscriptionStatsRequest:
+      name: AdminGetSubscriptionStatsRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+
+    AdminSubscriptionStatsResponse:
+      name: AdminSubscriptionStatsResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          total_active:
+            type: integer
+          total_expired:
+            type: integer
+          total_canceled:
+            type: integer
+          total_terminated:
+            type: integer
+          by_tier:
+            type: array
+            items:
+              $ref: '#/components/schemas/TierCount'
+
+    # ─────── Promo Codes ───────
+
+    AdminCreatePromoCodeRequest:
+      name: AdminCreatePromoCodeRequest
+      payload:
+        type: object
+        required: [access_token, code, discount_type, discount_value]
+        properties:
+          access_token:
+            type: string
+          code:
+            type: string
+          discount_type:
+            type: string
+          discount_value:
+            type: integer
+          max_uses:
+            type: integer
+          applicable_tiers:
+            type: array
+            items:
+              type: integer
+          min_duration_months:
+            type: integer
+          valid_until:
+            type: string
+
+    AdminPromoCodeResponse:
+      name: AdminPromoCodeResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          promo_code:
+            $ref: '#/components/schemas/PromoCodeRecord'
+
+    AdminListPromoCodesRequest:
+      name: AdminListPromoCodesRequest
+      payload:
+        type: object
+        required: [access_token]
+        properties:
+          access_token:
+            type: string
+          page:
+            type: integer
+          limit:
+            type: integer
+          active_only:
+            type: boolean
+
+    AdminListPromoCodesResponse:
+      name: AdminListPromoCodesResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          promo_codes:
+            type: array
+            items:
+              $ref: '#/components/schemas/PromoCodeRecord'
+          total:
+            type: integer
+
+    AdminDeactivatePromoCodeRequest:
+      name: AdminDeactivatePromoCodeRequest
+      payload:
+        type: object
+        required: [access_token, code]
+        properties:
+          access_token:
+            type: string
+          code:
+            type: string
+
+    AdminDeactivatePromoCodeResponse:
+      name: AdminDeactivatePromoCodeResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+
+    # ─────── Notifications ───────
+
+    AdminSendNotificationRequest:
+      name: AdminSendNotificationRequest
+      payload:
+        type: object
+        required: [access_token, user_id, email, subject, body]
+        properties:
+          access_token:
+            type: string
+          user_id:
+            type: string
+          email:
+            type: string
+            format: email
+          subject:
+            type: string
+          body:
+            type: string
+          channel:
+            type: string
+            enum: [email, in_app]
+            default: email
+
+    AdminSendNotificationResponse:
+      name: AdminSendNotificationResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          notification_id:
+            type: string
+
+    AdminSendBulkNotificationRequest:
+      name: AdminSendBulkNotificationRequest
+      payload:
+        type: object
+        required: [access_token, subject, body]
+        properties:
+          access_token:
+            type: string
+          subject:
+            type: string
+          body:
+            type: string
+          channel:
+            type: string
+            enum: [email, in_app]
+            default: email
+          recipients:
+            type: array
+            items:
+              $ref: '#/components/schemas/BulkRecipient'
+            description: Optional explicit list — if empty, sends to all users
+
+    AdminSendBulkNotificationResponse:
+      name: AdminSendBulkNotificationResponse
+      payload:
+        type: object
+        properties:
+          success:
+            type: boolean
+          message:
+            type: string
+          total:
+            type: integer
+          sent:
+            type: integer
+          failed:
+            type: integer
+
+  schemas:
+    UserRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          type: integer
+        status:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        banned_at:
+          type: string
+          format: date-time
+        ban_reason:
+          type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    ArticleRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        slug:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: string
+        type:
+          type: string
+        cover_image_url:
+          type: string
+        view_count:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        categories:
+          type: array
+          items:
+            type: string
+
+    SubscriptionRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        sub_type:
+          type: integer
+        free_trial:
+          type: boolean
+        status:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        grace_period_end:
+          type: string
+          format: date-time
+        issued_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TierCount:
+      type: object
+      properties:
+        tier:
+          type: integer
+        count:
+          type: integer
+
+    PromoCodeRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        discount_type:
+          type: string
+        discount_value:
+          type: integer
+        max_uses:
+          type: integer
+        used_count:
+          type: integer
+        applicable_tiers:
+          type: array
+          items:
+            type: integer
+        min_duration_months:
+          type: integer
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BulkRecipient:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email

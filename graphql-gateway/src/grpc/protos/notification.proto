@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "notificationpb";
+option java_multiple_files = true;
+
+/* =============================
+   NOTIFICATION SERVICE RPCs
+   ============================= */
+
+service NotificationService {
+  // User-facing
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse);
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAllAsReadResponse);
+  rpc DeleteNotification(DeleteNotificationRequest) returns (DeleteNotificationResponse);
+
+  // Admin / system
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc GetNotificationStats(GetNotificationStatsRequest) returns (GetNotificationStatsResponse);
+  rpc GetDeliveryLog(GetDeliveryLogRequest) returns (GetDeliveryLogResponse);
+}
+
+
+/* =============================
+        NOTIFICATION STRUCT
+   ============================= */
+
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  string type = 3;              // welcome, verify_email, forgot_password, etc.
+  string channel = 4;           // email, in_app, push
+  string title = 5;
+  string body = 6;
+  string status = 7;            // pending, sent, failed, read
+  bool read = 8;
+  string created_at = 9;
+  string sent_at = 10;
+  string read_at = 11;
+}
+
+
+/* =============================
+      GET NOTIFICATIONS
+   ============================= */
+
+message GetNotificationsRequest {
+  string user_id = 1;
+  int32 limit = 2;              // default 20, max 100
+  int32 offset = 3;
+  string type_filter = 4;       // optional: filter by notification type
+  string read_filter = 5;       // optional: "read", "unread", or "" for all
+}
+
+message GetNotificationsResponse {
+  bool success = 1;
+  repeated Notification notifications = 2;
+  int64 total_count = 3;
+}
+
+
+/* =============================
+       GET UNREAD COUNT
+   ============================= */
+
+message GetUnreadCountRequest {
+  string user_id = 1;
+}
+
+message GetUnreadCountResponse {
+  bool success = 1;
+  int64 count = 2;
+}
+
+
+/* =============================
+         MARK AS READ
+   ============================= */
+
+message MarkAsReadRequest {
+  string notification_id = 1;
+  string user_id = 2;
+}
+
+message MarkAsReadResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* =============================
+       MARK ALL AS READ
+   ============================= */
+
+message MarkAllAsReadRequest {
+  string user_id = 1;
+}
+
+message MarkAllAsReadResponse {
+  bool success = 1;
+  string message = 2;
+  int64 updated_count = 3;
+}
+
+
+/* =============================
+      DELETE NOTIFICATION
+   ============================= */
+
+message DeleteNotificationRequest {
+  string notification_id = 1;
+  string user_id = 2;
+}
+
+message DeleteNotificationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+/* =============================
+     SEND NOTIFICATION (admin)
+   ============================= */
+
+message SendNotificationRequest {
+  string user_id = 1;
+  string email = 2;             // recipient email
+  string type = 3;              // notification type
+  string channel = 4;           // email, in_app
+  string subject = 5;
+  string body = 6;              // plain text body or template context as JSON
+}
+
+message SendNotificationResponse {
+  bool success = 1;
+  string message = 2;
+  string notification_id = 3;
+}
+
+
+/* =============================
+     GET NOTIFICATION STATS
+   ============================= */
+
+message GetNotificationStatsRequest {
+  string from_time = 1;         // ISO timestamp
+  string to_time = 2;           // ISO timestamp
+}
+
+message StatsByType {
+  string type = 1;
+  int64 count = 2;
+}
+
+message StatsByStatus {
+  string status = 1;
+  int64 count = 2;
+}
+
+message StatsByChannel {
+  string channel = 1;
+  int64 count = 2;
+}
+
+message GetNotificationStatsResponse {
+  bool success = 1;
+  int64 total_sent = 2;
+  int64 total_failed = 3;
+  repeated StatsByType by_type = 4;
+  repeated StatsByStatus by_status = 5;
+  repeated StatsByChannel by_channel = 6;
+}
+
+
+/* =============================
+       GET DELIVERY LOG
+   ============================= */
+
+message GetDeliveryLogRequest {
+  string notification_id = 1;
+}
+
+message DeliveryLogEntry {
+  string id = 1;
+  string user_id = 2;
+  string type = 3;
+  string channel = 4;
+  string title = 5;
+  string body = 6;
+  string recipient_email = 7;
+  string template = 8;
+  string payload = 9;           // JSON string of original event payload
+  string provider_response = 10; // JSON string of SMTP response
+  string status = 11;
+  int32 retry_count = 12;
+  string error_message = 13;
+  string created_at = 14;
+  string sent_at = 15;
+  string read_at = 16;
+}
+
+message GetDeliveryLogResponse {
+  bool success = 1;
+  DeliveryLogEntry entry = 2;
+}
