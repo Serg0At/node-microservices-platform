@@ -27,13 +27,28 @@ export const initRabbitConsumer = async () => {
   channel.consume(QUEUES.REGISTRATION, async (msg) => {
     if (!msg) return;
 
+    let payload;
     try {
-      const payload = JSON.parse(msg.content.toString());
-      logger.info('Received user.registered event', { userId: payload.user_id, username: payload.username });
+      payload = JSON.parse(msg.content.toString());
+    } catch (parseErr) {
+      logger.error('user.registered: malformed JSON, dropping', { error: parseErr.message });
+      channel.nack(msg, false, false);
+      return;
+    }
 
-      await dbBreaker.fire(() =>
+    logger.info('Received user.registered event', {
+      userId: payload.user_id,
+      username: payload.username,
+      retry: msg.properties.headers?.['x-retry-count'] || 0,
+    });
+
+    try {
+      // Idempotent: ON CONFLICT (user_id) DO NOTHING — safe under
+      // at-least-once redelivery and retries. Returns the existing row if
+      // the profile was already created by a prior delivery of this event.
+      const { profile, created } = await dbBreaker.fire(() =>
         db.transaction((trx) =>
-          ProfileModel.create(
+          ProfileModel.createIfNotExists(
             {
               user_id: payload.user_id,
               username: payload.username,
@@ -44,14 +59,41 @@ export const initRabbitConsumer = async () => {
         )
       );
 
-      logger.info('Profile created for new user', { userId: payload.user_id });
+      if (created) {
+        logger.info('Profile created for new user', { userId: payload.user_id, profileId: profile?.id });
+      } else {
+        logger.info('Profile already exists, skipping create (idempotent)', {
+          userId: payload.user_id,
+          profileId: profile?.id,
+        });
+      }
+
       channel.ack(msg);
     } catch (err) {
-      logger.error('Failed to process user.registered event', { error: err.message, stack: err.stack });
+      // Defence-in-depth: even with ON CONFLICT we could see a different
+      // unique constraint (e.g., username taken by another row). Treat
+      // 23505 as a no-op rather than retrying forever.
+      if (err?.code === '23505') {
+        logger.warn('user.registered: unique violation, treating as already-processed', {
+          userId: payload.user_id,
+          constraint: err.constraint,
+          detail: err.detail,
+        });
+        channel.ack(msg);
+        return;
+      }
+
+      logger.error('Failed to process user.registered event', {
+        userId: payload.user_id,
+        error: err.message,
+        stack: err.stack,
+      });
 
       const retryCount = (msg.properties.headers?.['x-retry-count'] || 0) + 1;
       if (retryCount <= RETRY.MAX_RETRIES) {
-        logger.warn(`Retrying user.registered (attempt ${retryCount}/${RETRY.MAX_RETRIES})`);
+        logger.warn(`Retrying user.registered (attempt ${retryCount}/${RETRY.MAX_RETRIES})`, {
+          userId: payload.user_id,
+        });
         setTimeout(() => {
           channel.publish('', QUEUES.REGISTRATION, msg.content, {
             ...msg.properties,
@@ -60,7 +102,9 @@ export const initRabbitConsumer = async () => {
           channel.ack(msg);
         }, RETRY.RETRY_DELAY);
       } else {
-        logger.error('Max retries exceeded for user.registered event, nacking');
+        logger.error('Max retries exceeded for user.registered event, nacking', {
+          userId: payload.user_id,
+        });
         channel.nack(msg, false, false);
       }
     }
