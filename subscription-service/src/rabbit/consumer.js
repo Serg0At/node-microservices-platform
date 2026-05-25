@@ -26,9 +26,22 @@ export const initRabbitConsumer = async () => {
   await channel.assertQueue(AUTH_QUEUE.NAME, { durable: true });
   await channel.assertQueue(PAYMENT_QUEUE.NAME, { durable: true });
 
-  // Bind queues
-  await channel.bindQueue(AUTH_QUEUE.NAME, AUTH_EXCHANGE.NAME, AUTH_QUEUE.BIND_PATTERN);
-  await channel.bindQueue(PAYMENT_QUEUE.NAME, PAYMENT_EXCHANGE.NAME, PAYMENT_QUEUE.BIND_PATTERN);
+  // Bind queues. The handler map is the single source of truth for what
+  // routing keys this service consumes — deriving bindings from it (rather
+  // than from an env var) means a misconfigured .env can't silently break
+  // a critical event path. We also unbind any leftover legacy bindings on
+  // the durable queue (e.g. `user.registered` from an earlier deployment)
+  // so the queue's bindings match the code's declared interest exactly.
+  const authRoutingKeys = Object.keys(handlers).filter(k => k.startsWith('user.'));
+  const paymentRoutingKeys = Object.keys(handlers).filter(k => k.startsWith('payment.'));
+
+  await bindAll(channel, AUTH_QUEUE.NAME, AUTH_EXCHANGE.NAME, authRoutingKeys);
+  await bindAll(channel, PAYMENT_QUEUE.NAME, PAYMENT_EXCHANGE.NAME, paymentRoutingKeys);
+
+  logger.info('Bound subscription-service queues', {
+    auth: { queue: AUTH_QUEUE.NAME, keys: authRoutingKeys },
+    payment: { queue: PAYMENT_QUEUE.NAME, keys: paymentRoutingKeys },
+  });
 
   // Consume from auth queue
   channel.consume(AUTH_QUEUE.NAME, async (msg) => {
@@ -99,6 +112,18 @@ const processMessage = async (msg, queueName) => {
       logger.error(`Max retries exceeded for ${routingKey}, nacking`, { routingKey });
       channel.nack(msg, false, false);
     }
+  }
+};
+
+/**
+ * Bind the queue to every routing key in `keys` on the given exchange.
+ * `bindQueue` is idempotent; legacy bindings remain on the queue but are
+ * harmless because the handler map explicitly no-ops unknown keys.
+ */
+const bindAll = async (ch, queue, exchange, keys) => {
+  for (const key of keys) {
+    await ch.bindQueue(queue, exchange, key);
+    logger.info('Bound queue', { queue, exchange, routingKey: key });
   }
 };
 

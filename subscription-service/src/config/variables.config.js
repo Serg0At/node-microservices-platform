@@ -67,7 +67,8 @@ const config = {
 
     AUTH_QUEUE: {
       NAME: process.env.RMQ_AUTH_QUEUE || 'subscription-service.auth.queue',
-      BIND_PATTERN: process.env.RMQ_AUTH_BIND_PATTERN || 'user.registered',
+      // Trial is provisioned only after the user proves email ownership.
+      BIND_PATTERN: process.env.RMQ_AUTH_BIND_PATTERN || 'user.email_verified',
     },
 
     PAYMENT_QUEUE: {

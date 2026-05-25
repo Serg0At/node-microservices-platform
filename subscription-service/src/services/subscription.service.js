@@ -423,56 +423,76 @@ export default class SubscriptionService {
   }
 
   /**
-   * Handle trial creation from user.registered event.
+   * Handle trial creation from `user.email_verified` event.
+   *
+   * Idempotent under retries: if the same event is redelivered, we detect
+   * the existing trial and re-emit `subscription.activated` so downstream
+   * (notification-service) can still react. The DB row is not duplicated.
    */
   static async createTrialSubscription(userId, trialSignals) {
-    // Check if user already has any subscription with trial used
+    logger.info('createTrialSubscription: start', { userId, trialSignals });
+
     const trialUsed = await dbBreaker.fire(() =>
       SubscriptionModel.hasUsedTrial(userId)
     );
-
     if (trialUsed) {
-      logger.info('Trial already used, skipping', { userId });
+      logger.info('Trial already consumed by paid plan, skipping', { userId });
       return null;
     }
 
-    // Check for existing active subscription
     const existing = await dbBreaker.fire(() =>
       SubscriptionModel.findActiveByUserId(userId)
     );
 
-    if (existing) {
-      logger.info('User already has active subscription, skipping trial', { userId });
+    let subscription;
+    let alreadyExisted = false;
+
+    if (existing && existing.issued_by === 'System') {
+      // Same event redelivered, or verifyEmail invoked twice. Re-use the
+      // existing trial and re-emit the activation event so downstream
+      // notification flow remains consistent.
+      subscription = existing;
+      alreadyExisted = true;
+      logger.info('Trial already exists for user, re-emitting activation event', {
+        userId,
+        subscriptionId: subscription.id,
+      });
+    } else if (existing) {
+      // Active paid subscription already in place — nothing to do.
+      logger.info('User already has a non-trial active subscription, skipping trial', {
+        userId,
+        existingIssuedBy: existing.issued_by,
+      });
       return null;
+    } else {
+      const abuseDetected = trialSignals && (
+        trialSignals.fingerprint_seen === true ||
+        trialSignals.ip_seen === true ||
+        trialSignals.disposable_email === true
+      );
+      const trialDays = abuseDetected ? 1 : 3;
+
+      const now = new Date();
+      const endedAt = new Date(now);
+      endedAt.setDate(endedAt.getDate() + trialDays);
+
+      subscription = await dbBreaker.fire(() =>
+        db.transaction(trx =>
+          SubscriptionModel.create({
+            user_id: userId,
+            sub_type: 2, // Standard trial
+            free_trial: false, // false = unused (will be set to true when actual payment occurs)
+            status: 'active',
+            started_at: now,
+            ended_at: endedAt,
+            issued_by: 'System',
+          }, trx)
+        )
+      );
+
+      logger.info('Trial subscription created', { userId, trialDays, subscriptionId: subscription.id });
     }
 
-    // Determine trial duration based on abuse signals
-    const abuseDetected = trialSignals && (
-      trialSignals.fingerprint_seen === true ||
-      trialSignals.ip_seen === true ||
-      trialSignals.disposable_email === true
-    );
-    const trialDays = abuseDetected ? 1 : 3;
-
-    const now = new Date();
-    const endedAt = new Date(now);
-    endedAt.setDate(endedAt.getDate() + trialDays);
-
-    const subscription = await dbBreaker.fire(() =>
-      db.transaction(trx =>
-        SubscriptionModel.create({
-          user_id: userId,
-          sub_type: 2, // Standard trial
-          free_trial: false, // false = unused (will be set to true when actual payment occurs)
-          status: 'active',
-          started_at: now,
-          ended_at: endedAt,
-          issued_by: 'System',
-        }, trx)
-      )
-    );
-
-    // Invalidate cache
     try {
       await redisBreaker.fire(async () => {
         await subscriptionCacheOps.invalidateSubscription(userId);
@@ -482,7 +502,8 @@ export default class SubscriptionService {
       // non-critical
     }
 
-    // Publish event
+    // Always publish — let the consumer be idempotent. The notification
+    // handler de-dupes via the per-notification DB row.
     try {
       await publishEvent('subscription.activated', {
         user_id: String(userId),
@@ -490,12 +511,20 @@ export default class SubscriptionService {
         started_at: subscription.started_at?.toISOString?.() || String(subscription.started_at),
         ended_at: subscription.ended_at?.toISOString?.() || String(subscription.ended_at),
         issued_by: 'System',
+        is_trial: true,
+      });
+      logger.info('Published subscription.activated (trial)', {
+        userId,
+        subscriptionId: subscription.id,
+        replayed: alreadyExisted,
       });
     } catch (err) {
-      logger.warn('Failed to publish subscription.activated event', { error: err.message, userId });
+      // Throw — let the message broker retry. We don't want to ack a
+      // half-completed activation.
+      logger.error('Failed to publish subscription.activated', { error: err.message, userId });
+      throw err;
     }
 
-    logger.info('Trial subscription created', { userId, trialDays });
     return subscription;
   }
 
@@ -554,6 +583,7 @@ export default class SubscriptionService {
         started_at: subscription.started_at?.toISOString?.() || String(subscription.started_at),
         ended_at: subscription.ended_at?.toISOString?.() || String(subscription.ended_at),
         issued_by: 'Payment',
+        is_trial: false,
       });
     } catch (err) {
       logger.warn('Failed to publish subscription.activated event', { error: err.message, userId });
