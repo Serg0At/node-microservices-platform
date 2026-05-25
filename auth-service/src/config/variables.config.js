@@ -133,6 +133,7 @@ const config = {
 
     ROUTING_KEYS: {
       USER_REGISTERED: 'user.registered',
+      USER_EMAIL_VERIFIED: 'user.email_verified',
       USER_LOGGED_IN: 'user.logged_in',
       USER_PASSWORD_CHANGED: 'user.password_changed',
       USER_PROFILE_UPDATED: 'user.profile_updated',

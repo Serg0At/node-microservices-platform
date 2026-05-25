@@ -10,6 +10,7 @@ import config from '../config/variables.config.js';
 import db from '../config/db.js';
 import { AuthModel } from '../models/index.js';
 import { dbBreaker, redisBreaker, rabbitBreaker } from '../utils/index.js';
+import logger from '../utils/logger.util.js';
 
 const disposableSet = new Set(disposableDomains);
 
@@ -94,9 +95,34 @@ export default class AuthService {
     await redisBreaker.fire(() =>
       redis.set(
         redisKey,
-        JSON.stringify({ userId: newUser.id, email }),
+        JSON.stringify({
+          userId: newUser.id,
+          email: newUser.email,
+          username: newUser.username,
+          trial_signals: trialSignals,
+        }),
         'EX',
         config.EMAIL.VERIFY_TOKEN_TTL
+      )
+    );
+
+    logger.info('Verify token issued for new user', {
+      userId: newUser.id,
+      email: newUser.email,
+      tokenPreview: `${verificationToken.slice(0, 6)}…${verificationToken.slice(-4)}`,
+      ttlSeconds: config.EMAIL.VERIFY_TOKEN_TTL,
+    });
+
+    await rabbitBreaker.fire(() =>
+      publishAuthEvent(
+        config.RABBITMQ.ROUTING_KEYS.USER_VERIFY_EMAIL,
+        {
+          user_id: newUser.id,
+          email: newUser.email,
+          username: newUser.username,
+          verification_token: verificationToken,
+          ts: Math.floor(Date.now() / 1000),
+        }
       )
     );
 
@@ -109,6 +135,9 @@ export default class AuthService {
 
     await redisBreaker.fire(() => redisOps.saveRefreshToken(refreshToken, newUser.id, uaHash));
 
+    // user.registered is consumed by user-service to create the profile row.
+    // Notification + subscription concerns now hang off user.verify_email and
+    // user.email_verified respectively — keep this payload minimal.
     await rabbitBreaker.fire(() =>
       publishAuthEvent(
         config.RABBITMQ.ROUTING_KEYS.USER_REGISTERED,
@@ -116,8 +145,6 @@ export default class AuthService {
           user_id: newUser.id,
           email: newUser.email,
           username: newUser.username,
-          verification_token: verificationToken,
-          trial_signals: trialSignals,
           ts: Math.floor(Date.now() / 1000),
         }
       )
@@ -624,11 +651,46 @@ export default class AuthService {
       throw new Error('Verification link expired or invalid');
     }
 
-    const { userId } = JSON.parse(raw);
+    const stored = JSON.parse(raw);
+    const { userId, email, username, trial_signals } = stored;
+
+    logger.info('Verifying email token', { userId, email });
 
     const updated = await dbBreaker.fire(() => AuthModel.activate(userId));
     if (!updated) {
       throw new Error('User not found');
+    }
+
+    // ORDER MATTERS:
+    // 1. Activate user (DB).
+    // 2. Publish event (downstream services react: subscription-service
+    //    provisions trial). If this throws, the token is STILL in Redis
+    //    and the user can retry — they'll hit the activate step again
+    //    (idempotent: setting is_active=true twice is a no-op) and we
+    //    re-publish. Keeping the token until publish succeeds prevents
+    //    a permanently-orphaned "verified, no subscription" state.
+    // 3. Delete the token only after publish succeeds.
+    try {
+      await rabbitBreaker.fire(() =>
+        publishAuthEvent(
+          config.RABBITMQ.ROUTING_KEYS.USER_EMAIL_VERIFIED,
+          {
+            user_id: userId,
+            email,
+            username,
+            trial_signals: trial_signals || null,
+            ts: Math.floor(Date.now() / 1000),
+          }
+        )
+      );
+      logger.info('Published user.email_verified', { userId, email });
+    } catch (publishErr) {
+      logger.error('Failed to publish user.email_verified — leaving token in Redis for retry', {
+        userId,
+        email,
+        error: publishErr.message,
+      });
+      throw publishErr;
     }
 
     await redisBreaker.fire(() => getRedis().del(redisKey));
