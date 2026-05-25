@@ -62,6 +62,22 @@ function compileTemplates() {
 }
 
 /**
+ * Produce a minimal plain-text body from the template context and rendered HTML.
+ * Prefers an explicit URL field (verificationLink / dashboardUrl) so the link
+ * is always visible to text-only clients and to spam scanners.
+ */
+function buildPlainTextFallback(context, html) {
+  const link = context?.verificationLink || context?.dashboardUrl || null;
+  const stripped = String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return link ? `${stripped}\n\nLink: ${link}` : stripped;
+}
+
+/**
  * Send an email using a compiled Handlebars template.
  *
  * @param {object} params
@@ -83,18 +99,41 @@ export const sendEmail = async ({ to, subject, template, context }) => {
     year: new Date().getFullYear(),
   });
 
+  // Plain-text fallback. Many SMTP servers (Gmail in particular) treat
+  // HTML-only mail as a spam signal — providing a text alternative lifts
+  // deliverability. Build it from any link in the context plus a stripped
+  // version of the HTML.
+  const text = buildPlainTextFallback(context, html);
+
   const mailOptions = {
     from: `"${config.SMTP.FROM_NAME}" <${config.SMTP.FROM_EMAIL}>`,
     to,
     subject,
     html,
+    text,
   };
+
+  logger.info('Sending email', {
+    to,
+    subject,
+    template,
+    from: mailOptions.from,
+    html_length: html.length,
+    text_length: text.length,
+  });
 
   const result = await smtpBreaker.fire(async () => {
     return transporter.sendMail(mailOptions);
   });
 
-  logger.debug('Email sent', { to, subject, template, messageId: result.messageId });
+  logger.info('Email sent', {
+    to,
+    subject,
+    template,
+    messageId: result.messageId,
+    accepted: result.accepted,
+    rejected: result.rejected,
+  });
 
   return {
     messageId: result.messageId,
